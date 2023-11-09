@@ -1,0 +1,715 @@
+---
+title: "Python to R translation"
+author: "Cleyton Farias"
+format: 
+    html:
+        code-fold: true
+        code-tools: true
+        self-contained: true
+engine: knitr
+---
+
+```{python}
+#| label: python-setup
+
+# import libraries and define global settings
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import scipy.stats as stats
+import matplotlib.pyplot as plt
+
+# The code below define global figure properties used for publication.
+#import matplotlib_inline.backend_inline
+# matplotlib_inline.backend_inline.set_matplotlib_formats('svg') # display figures in vector format
+plt.rcParams.update({'font.size':14,             # font size
+                     'savefig.dpi':300,          # output resolution
+                     'axes.titlelocation':'left',# title location
+                     'axes.spines.right':False,  # remove axis bounding box
+                     'axes.spines.top':False,    # remove axis bounding box
+                     })
+```
+
+
+
+# Figure 7.2: What to look for in visual inspection of data
+
+## Python version:
+
+```{python}
+_,axs = plt.subplots(2,2,figsize=(12,6))
+
+# panel A: unexpected range
+xA = np.concatenate((np.random.randn(20),np.random.randn(80)*30),axis=0)
+axs[0,0].plot(xA,'ks',markersize=10,markerfacecolor=(.7,.7,.7),alpha=.8)
+axs[0,0].set(xlabel='Data index',xticks=[],yticks=[],ylabel='Data value')
+axs[0,0].set_title(r'$\bf{A}$)  Unexpected data range')
+
+# panel B: distribution shape
+xB = np.concatenate((5+np.random.randn(150),np.exp(1+np.random.randn(150))),axis=0)
+axs[0,1].hist(xB, bins='fd',edgecolor='k',facecolor=(.7,.7,.7))
+axs[0,1].set(xlabel='Data value',xticks=[],yticks=[],ylabel='Count')
+axs[0,1].set_title(r'$\bf{B}$)  Nonstandard distribution')
+
+# panel C: mixed datasets
+xC = np.concatenate((4+np.random.randn(150),np.random.randn(150)-4),axis=0)
+axs[1,0].hist(xC,bins=50,edgecolor='k',facecolor=(.7,.7,.7))
+axs[1,0].set(xlabel='Data value',xticks=[],yticks=[],ylabel='Count')
+axs[1,0].set_title(r'$\bf{C}$)  Mixed dataset')
+
+# panel D: outliers
+xD = np.random.randn(150)
+xD[60] = 10
+xD[84] = 14
+axs[1,1].plot(xD,'ks',markersize=10,markerfacecolor=(.7,.7,.7),alpha=.8)
+axs[1,1].set(xlabel='Data index',xticks=[],yticks=[],ylabel='Data value')
+axs[1,1].set_title(r'$\bf{B}$)  Outliers')
+
+# export
+plt.tight_layout()
+plt.savefig('dataQC_qualInspection.png')
+plt.show()
+```
+
+
+## R version:
+```{r}
+#| message: false
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+set.seed(10)
+
+# panel A: unexpected range
+xA=c(rnorm(20), rnorm(80)*80)
+data_A = tibble(data_index=1:length(xA), data_value = xA)
+
+pA = ggplot(data_A, aes(x=data_index, y = data_value)) +
+    geom_point(
+        shape=22,
+        size=3,
+        fill = "gray",
+        alpha=.8
+    ) + 
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black"),
+    ) + 
+    labs(title = bquote(bold("A)")~"Unexpected data range"),
+         y = "Data value", x = "Data index")
+
+# panel B: distribution shape
+xB = c(5+rnorm(150), exp(1+rnorm(150)))
+data_B = tibble(data_index=1:length(xB), data_value=xB)
+
+pB = ggplot(data_B, aes(x=data_value))+
+    geom_histogram(color="black", fill="gray", bins=50) + 
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")
+    ) + 
+    labs(title = bquote(bold("B)")~"Nonstandard distribution"),
+         y = "Count", x = "Data value")
+
+# panel C: mixed datasets
+xC = c(4+rnorm(150), rnorm(150)-4)
+data_C = tibble(data_index = 1:length(xC), data_value = xC)
+
+pC = ggplot(data_C, aes(x=data_value))+
+    geom_histogram(color="black", fill="gray") + 
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")
+    ) + 
+    labs(title = bquote(bold("C)")~"Mixed dataset"),
+         y = "Count", x = "Data value")
+
+# panel D: outliers
+xD = rnorm(150)
+data_D = tibble(data_index=1:length(xD), data_value=xD)
+data_D[60, "data_value"] = 10
+data_D[84, "data_value"] = 14
+
+pD = ggplot(data_D, aes(x = 1:nrow(data_D), y = data_value)) +
+    geom_point(
+        shape=22,
+        size=3,
+        fill = "gray",
+        alpha=.8
+    ) + 
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")
+    ) + 
+    labs(title = bquote(bold("D)")~"Outliers"),
+         y = "Data value", x = "Data index")
+
+
+p7.2 = pA + pB + pC + pD
+p7.2
+```
+
+
+# Figure 7.4: Example of dataset with outliers
+
+## Python version:
+
+```{python}
+# Create normally distributed data
+N = 100
+data = np.random.randn(N)
+
+# and add two random outliers in random positions
+data[np.random.choice(np.arange(N),2)] = np.random.uniform(2,3,2)**2
+
+# and plot
+plt.figure(figsize=(8,4))
+plt.plot(data,'ks',markersize=10,markerfacecolor=(.7,.7,.7))
+plt.xlim([-2,N+1])
+plt.xlabel('Data index')
+plt.ylabel('Data value')
+
+plt.tight_layout()
+plt.show()
+```
+
+## R version:
+
+```{r}
+# Create normally distributed data
+N = 100
+y = rnorm(N)
+data = tibble(data_index = 1:length(y), data_value = y)
+
+# and add two random outliers in random positiions
+data[sample(N, 2), "data_value"] = runif(2, min=2, max=3)^2
+
+# and plot:
+p7.4 = ggplot(data, aes(x = data_index, y = data_value)) + 
+    geom_point(
+        shape=22, 
+        size=3,
+        fill = "gray",
+        alpha=.8
+    ) + 
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")
+    ) +
+    labs(y = "Data value", x = "Data index")
+
+p7.4
+```
+
+
+# Figure 7.6: Z-score method for identifying outliers
+
+## Python version:
+
+```{python}
+# outlier threshold
+zThreshold = 3.09
+
+# create some raw data
+N = 135
+data = np.exp(np.random.randn(N)/2) + 5
+
+# zscore the data
+dataZ = (data-np.mean(data)) / np.std(data,ddof=1)
+
+# identify data indices containing outliers
+outliers = np.where(np.abs(dataZ)>zThreshold)[0]
+
+# and plot
+_,axs = plt.subplots(1,2,figsize=(10,4))
+axs[0].plot(data,'ks',markersize=10,markerfacecolor=(.7,.7,.7))
+axs[0].set(xlim=[-2,N+1],xlabel='Data index',ylabel='Data value')
+axs[0].set_title(r'$\bf{A}$)  Original data')
+
+
+axs[1].plot(dataZ,'ks',markersize=10,markerfacecolor=(.9,.9,.9))
+axs[1].axhline(zThreshold,linestyle='--',color=(.9,.9,.9))
+axs[1].plot(outliers,dataZ[outliers],'kx',markersize=10,markeredgewidth=2)
+axs[1].set(xlim=[-3,N+2],xlabel='Data index',ylabel='Transformed data value')
+axs[1].set_title(r'$\bf{B}$)  Z-transformed data')
+
+plt.tight_layout()
+plt.show()
+```
+
+## R version:
+
+```{r}
+# outlier threshold
+zThreshold = 3.09
+
+# create some raw data
+N = 135
+data = exp(rnorm(N)/2) + 5
+
+# zscore the data:
+dataZ = (data - mean(data))/sd(data) # sd uses n-1 dof
+
+# identify data indices containing outliers
+outliers = abs(dataZ) > zThreshold
+
+# and plot
+data = tibble(data_index = 1:length(data), data_value = data)
+p1 = ggplot(data, aes(x = data_index, y = data_value)) + 
+    geom_point(
+        shape=22, 
+        size=3,
+        fill = "gray",
+        alpha=.8
+    ) + 
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")
+    ) + 
+    labs(title = bquote(bold("A)")~"Original data"),
+         y = "Data value", x = "Data index")
+
+
+dataZ = tibble(data_index = 1:length(dataZ), data_value = dataZ)
+p2 = ggplot(dataZ, aes(x=data_index, y = data_value)) + 
+    geom_point(
+          shape=22, 
+          size=3,
+          fill = "gray",
+          alpha=.8
+    ) + 
+    geom_point(
+        data = dataZ[outliers,],
+        aes(x = data_index, y=data_value),
+        shape=7,
+        size=3,
+        fill = "gray",
+        alpha=.8
+    ) +
+    geom_hline(
+        yintercept = zThreshold, 
+        linetype="dashed", 
+        linewidth=.7,
+        color="gray",
+    ) + 
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")
+    ) + 
+    labs(title = bquote(bold("A)")~"Z-transformed data"),
+         y = "Transformed data value", x = "Data index")
+
+p7.6 = p1 + p2
+p7.6
+```
+
+
+# Figure 7.7: Impact of removing outliers on z-values
+
+## Python version:
+
+```{python}
+# create some raw data
+N = 10 # sample size
+data = np.exp(np.random.randn(N)/2) + 5
+data[-1] = np.max(data)+2 # impose an outlier (at the end for convenience)
+xvals = np.arange(N)
+
+dataZ1 = (data-np.mean(data)) / np.std(data,ddof=1)
+dataZ2 = (data[:-1]-np.mean(data[:-1])) / np.std(data[:-1],ddof=1)
+
+_,axs = plt.subplots(1,2,figsize=(10,4))
+axs[0].plot(xvals,data,'ks',markersize=10,markerfacecolor=(.7,.7,.7))
+axs[0].set(xticks=[],xlabel='Data index',ylabel='Raw data value')
+axs[0].set_title(r'$\bf{A}$)  Raw data')
+
+axs[1].plot(xvals,dataZ1,'ks',markersize=10,markerfacecolor=(.7,.7,.7),label='Z with outlier')
+axs[1].plot(xvals[:-1],dataZ2,'ko',markersize=10,markerfacecolor=(.5,.5,.5),label='Z without outlier')
+axs[1].set(xticks=[],xlabel='Data index',ylabel='Transformed data value')
+axs[1].legend()
+axs[1].set_title(r'$\bf{B}$)  Z-transformed data')
+
+# draw lines connection pre/post-removal values
+for d,z,x in zip(dataZ1[:-1],dataZ2,xvals[:-1]):
+  axs[1].plot([x,x],[d,z],':',color=(.7,.7,.7),zorder=-10)
+
+plt.tight_layout()
+plt.show()
+```
+
+
+## R version:
+
+```{r}
+# create some raw data
+N = 10 # sample size
+data = exp(rnorm(N)/2) + 5
+data[N] = max(data) + 2 # impose an outlier (at the end for convenience)
+
+dataZ1 = (data - mean(data)) / sd(data) # sd uses n-1 dof
+dataZ2 = (data[-N] - mean(data[-N])) / sd(data[-N]) # sd uses n-1 dof
+
+# and plot:
+data = tibble(data_index = 1:length(data), data_value = data)
+pA = ggplot(data, aes(x = data_index, y = data_value)) +
+    geom_point(
+        shape=22, 
+        size=3,
+        fill = "gray",
+        alpha=.8
+    ) + 
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black"),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()
+    ) + 
+    labs(title = bquote(bold("A)")~"Raw data"),
+         y = "Raw data value", x = "Data index")
+
+
+dataZ1 = tibble(data_index = 1:length(dataZ1), data_value = dataZ1, id="Z with outlier")
+dataZ2 = tibble(data_index = 1:length(dataZ2), data_value = dataZ2, id="Z without outlier")
+dataZ = rows_append(dataZ1, dataZ2)
+
+pB = ggplot(dataZ, 
+       aes(x = data_index, y=data_value, 
+           group = data_index,
+           shape=id,
+           fill=id)) + 
+    geom_point(
+        size=3,
+        alpha=.8
+    ) + 
+    geom_line(
+        linetype="dashed", 
+        linewidth=.3
+    )+
+    scale_shape_manual(values=c("Z with outlier" = 22,
+                                "Z without outlier" = 21)) + 
+    scale_fill_manual(values=c("Z with outlier" = "#bdbdbd",
+                               "Z without outlier" = "#525252")) + 
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black"),
+        legend.position="top",
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()
+    ) + 
+    labs(shape="", fill="",
+         title = bquote(bold("B)")~"Z-transformed data"),
+         y = "Raw data value", x = "Data index")
+
+p7.7 = pA + pB
+p7.7
+
+```
+
+
+# Figure 7.9: Data trimming
+
+## Python version:
+
+```{python}
+N = 74
+data = np.random.randn(N)**3
+
+# find largest and smallest values
+k = 2
+sortidx = np.argsort(data)
+minvals = sortidx[:k]
+maxvals = sortidx[-k:]
+
+_,axs = plt.subplots(2,1,figsize=(8,6))
+axs[0].plot(data,'ks',markersize=10,markerfacecolor=(.9,.9,.9))
+axs[0].plot(minvals,data[minvals],'kx',markersize=10,markeredgewidth=2)
+axs[0].plot(maxvals,data[maxvals],'kx',markersize=10,markeredgewidth=2)
+axs[0].set_title(r'$\bf{A}$)  Data with k-extreme points trimmed')
+
+
+# create a Gaussian probability curve for the panel B
+x = np.linspace(-4,4,401)
+gpdf = stats.norm.pdf(x)
+
+# the find the indices of the 2.5% and 97.5%
+lbndi = np.argmin(np.abs(x-stats.norm.ppf(.025))) # lbndi = Lower BouND Index
+ubndi = np.argmin(np.abs(x-stats.norm.ppf(1-.025)))
+
+
+# plot the probability function and the vertical lines
+axs[1].plot(x,gpdf,'k',linewidth=2)
+axs[1].axvline(x[lbndi],color=(.5,.5,.5),linewidth=.5,linestyle='--')
+axs[1].axvline(x[ubndi],color=(.5,.5,.5),linewidth=.5,linestyle='--')
+axs[1].set(xlim=x[[0,-1]],ylim=[0,.42])
+axs[1].set_title(r'$\bf{B}$)  Histogram showing trimmed areas')
+
+# now create patches for the rejected area
+axs[1].fill_between(x[:lbndi+1],gpdf[:lbndi+1],color='k',alpha=.4)
+axs[1].fill_between(x[ubndi:],gpdf[ubndi:],color='k',alpha=.4)
+
+
+# and save
+plt.tight_layout()
+plt.show()
+```
+
+## R Version:
+
+```{r}
+N = 74
+y = rnorm(N)^3
+data = tibble(data_index=1:length(y), data_value=y)
+
+# find largest and smallest values
+k = 2
+# sorting ascending order:
+data = arrange(data, data_value)
+largest = head(data, k)
+smallest = tail(data, k)
+
+pA = ggplot(data, aes(x = data_index, y = data_value)) + 
+      geom_point(
+        shape=22, 
+        size=3,
+        fill = "gray",
+        alpha=.8
+    ) + 
+    geom_point(
+        data = largest,
+        aes(x = data_index, y = data_value),
+        shape=7,
+        size=3,
+        fill = "gray",
+        alpha=.8
+    ) + 
+    geom_point(
+        data = smallest,
+        aes(x = data_index, y = data_value),
+        shape=7,
+        size=3,
+        fill = "gray",
+        alpha=.8
+    ) + 
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")
+    ) + 
+    labs(title = bquote(bold("A)")~"Data with k-extreme points trimmed"),
+         y = "", x = "")
+
+# create a Gaussian probability curve for the panel B
+x = seq(-4,4,length=401)
+gpdf = dnorm(x, mean = 0, sd = 1)
+data = tibble(data_index = x, data_value = gpdf)
+
+# find the indices of the 2.5% and 97.5%
+lbndi = which.min(abs(x - qnorm(0.025))) # lower bound index
+ubndi = which.min(abs(x - qnorm(0.975))) # upper bound index
+
+# plot the probability function and the vertical lines
+pB = ggplot(data = data, aes(x = data_index, y = data_value)) + 
+    geom_line() + 
+    geom_vline(xintercept = x[lbndi], linetype="dashed") + 
+    geom_ribbon(
+        data = filter(data, data_index <= x[lbndi]), 
+        aes(ymax = data_value, ymin=0),
+        fill="#525252") + 
+    geom_vline(xintercept = x[ubndi], linetype="dashed") + 
+     geom_ribbon(
+        data = filter(data, data_index >= x[ubndi]), 
+        aes(ymax = data_value, ymin=0),
+        fill="#525252") + 
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")
+    ) + 
+    labs(title = bquote(bold("B)")~"Histogram showing trimmed areas"),
+         y = "", x = "")
+
+pA + pB + plot_layout(ncol=1)
+```
+
+
+# Exercise 1
+
+## Python version:
+```{python}
+## iterative method
+# Note about this code: Because of random numbers, you are not guaranteed to get a result
+# that highlights the method. Try running the code several times.
+
+N = 30
+data = np.random.randn(N)
+data[data<-1] = data[data<-1]+2
+data[data>1.5] = data[data>1.5]**2; # try to force a few outliers
+
+
+# pick a lenient threshold just for illustration
+zscorethresh = 2
+dataZ = (data-np.mean(data)) / np.std(data,ddof=1)
+
+plt.figure(figsize=(10,4))
+
+colorz = 'brkmc'
+numiters = 0 # iteration counter
+while True:
+
+  # convert to z
+  datamean = np.nanmean(dataZ)
+  datastd  = np.nanstd(dataZ,ddof=1)
+  dataZ = (dataZ-datamean) / datastd
+
+  # find data values to remove
+  toremove = dataZ>zscorethresh
+
+  # break out of while loop if no points to remove
+  if sum(toremove)==0:
+    break
+  else:
+    # otherwise, mark the outliers in the plot
+    plt.plot(np.where(toremove)[0]+numiters/5,dataZ[toremove],'%sx'%colorz[numiters],
+             markersize=12,markeredgewidth=3)
+    dataZ[toremove] = np.nan
+
+  # replot
+  plt.plot(np.arange(N)+numiters/5,dataZ,linestyle='None',marker=f'${numiters}$',markersize=12,
+           color=colorz[numiters])
+
+  # update counter
+  numiters = numiters + 1
+
+
+plt.ylabel('Z-score')
+plt.xlabel('Data index')
+
+plt.tight_layout()
+plt.show()
+```
+
+## R version:
+
+Some notes: if I understand correctly, you want to simulate some data, add some outliers and calculate the z-scores and removing them to see the behavior of the dataset.
+
+In each iteration, you want to find all outliers, plot the all the datapoints, and mark the outliers to remove them in the next round.
+
+If that's the case, I take the liberty to reorganize the code and do the following:
+
+- Commented the part of the original `data` does not get z-scored twice in the first iteration;
+- Reorganized the `replot section` in the for-loop so that the data points are plotted even when no outlier is found. This will prevent the case of no-plotting when no outlier is found in the first iteration.
+
+Please, let me know if these changes make sense. In any case, I can follow strictly to the python code.
+
+
+```{r}
+#| message: false
+#| warning: false
+## iterative method
+# Note about this code: Because of random numbers, you are not guaranteed to get a result
+# that highlights the method. Try running the code several times.
+
+# Simulate the data:
+N = 30
+data = rnorm(N)
+data[data < -1] = data[data < -1] + 2
+data[data > 1.5] = data[ data > 1.5]^2
+
+# pick a lenient threshold just for illustration
+zscorethresh = 2
+
+# ======================================================= # 
+# if this part is included, then the first iteration will be 
+# z-scored two times.
+# dataZ = (data-mean(data)) / sd(data)
+
+# color pallete:
+colorz = c("blue", "black", "red", "magenta", "cyan")
+
+# start the skeleton of the plot:
+p = ggplot() + 
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")
+    ) + 
+    labs(y = "Z-score", x = "Data index")
+
+# initiate counter:
+numiters = 1
+
+# initiate the dataZ with original data:
+dataZ = data
+
+while(TRUE) {
+    # convert to z-score:
+    datamean = mean(dataZ, na.rm = T)
+    datastd = sd(dataZ, na.rm = T)
+    dataZ = (dataZ - datamean)/datastd
+    
+    # find data values to remoove:
+    toRemove = dataZ > zscorethresh
+    
+    # plot points in the current iteration:
+    nmb = numiters
+    color_ = colorz[nmb]
+    data_temp = tibble(data_index = 1:N + numiters/5, data_value = dataZ)
+    p <- p +
+    geom_text(
+        data = data_temp,
+        aes(x = data_index, y = data_value),
+        label = nmb,
+        size = 5,
+        color = color_
+    )
+    
+    # break out of the while loop if no points to remove:
+    if (sum(toRemove, na.rm = T) == 0) {
+        break
+    } else{
+        # otherwise, mark the outliers in the plot for the current iteration:
+        outlier_data = tibble(
+            data_index = which(toRemove) + numiters/5,
+            data_value = dataZ[toRemove]
+        )
+        color_ = colorz[numiters]
+        p <- p + 
+            geom_point(
+                data = outlier_data,
+                aes(x=data_index, y=data_value),
+                shape = 4,
+                color = color_,
+                size=2,
+                stroke=1
+            )
+        dataZ[toRemove] = NaN
+    }
+    
+    # update counter:
+    numiters <- numiters + 1
+}
+
+p
+```
+
