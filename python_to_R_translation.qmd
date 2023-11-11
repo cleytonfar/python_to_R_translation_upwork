@@ -11,6 +11,7 @@ engine: knitr
 
 ```{python}
 #| label: python-setup
+#| code-summary: Python Setup
 
 # import libraries and define global settings
 import numpy as np
@@ -20,16 +21,36 @@ import scipy.stats as stats
 import matplotlib.pyplot as plt
 
 # The code below define global figure properties used for publication.
-#import matplotlib_inline.backend_inline
+# import matplotlib_inline.backend_inline
 # matplotlib_inline.backend_inline.set_matplotlib_formats('svg') # display figures in vector format
-plt.rcParams.update({'font.size':14,             # font size
-                     'savefig.dpi':300,          # output resolution
-                     'axes.titlelocation':'left',# title location
-                     'axes.spines.right':False,  # remove axis bounding box
-                     'axes.spines.top':False,    # remove axis bounding box
-                     })
+plt.rcParams.update(
+  {'font.size':14,             # font size
+  'savefig.dpi':300,          # output resolution
+  'axes.titlelocation':'left',# title location
+  'axes.spines.right':False,  # remove axis bounding box
+  'axes.spines.top':False,    # remove axis bounding box
+  }
+)
+
+# setting seed
+np.random.seed(0)
 ```
 
+```{r}
+#| label: r-setup
+#| code-summary: R Setup
+#| message: false
+#| warning: false
+
+# Attaching packages
+library(dplyr)
+library(glue)
+library(ggplot2)
+library(patchwork)
+
+# setting seed
+set.seed(10)
+```
 
 
 # Figure 7.2: What to look for in visual inspection of data
@@ -75,10 +96,6 @@ plt.show()
 ## R version:
 ```{r}
 #| message: false
-library(dplyr)
-library(ggplot2)
-library(patchwork)
-set.seed(10)
 
 # panel A: unexpected range
 xA=c(rnorm(20), rnorm(80)*80)
@@ -548,7 +565,8 @@ pB = ggplot(data = data, aes(x = data_index, y = data_value)) +
     labs(title = bquote(bold("B)")~"Histogram showing trimmed areas"),
          y = "", x = "")
 
-pA + pB + plot_layout(ncol=1)
+p7.9 = pA + pB + plot_layout(ncol=1)
+p7.9
 ```
 
 
@@ -712,4 +730,597 @@ while(TRUE) {
 
 p
 ```
+
+
+# Exercise 2
+
+## Python version
+
+```{python}
+# create data
+N = 10000
+Y = np.exp(np.sin(np.random.randn(N)))
+
+# make a copy of the data to manipulate
+Yc = Y.copy()
+
+# not specified in the instructions, but always a good idea to inspect the data!
+plt.hist(Y,bins=40)
+plt.show()
+```
+
+
+```{python}
+# percent to remove (two-tailed)
+k = 4
+
+# convert that to a number of data points to remove from each tail
+pnts2nan = int( (k/2)/100 * N ) # with stated parameters, this should be 200
+
+# find the data sorting
+sort_idx = np.argsort(Y)
+
+# nan the two tails separately
+Yc[sort_idx[:pnts2nan]]  = np.nan
+Yc[sort_idx[-pnts2nan:]] = np.nan
+
+# confirm the right numbers of points
+print(f'Total dataset size: {len(Yc)}')
+print(f'Valid dataset size: {np.sum(~np.isnan(Yc))}')
+```
+
+```{python}
+# compute the mean and median (also used in the next exercise)
+meanY = np.mean(Y)
+medianY = np.median(Y)
+
+# print the means
+print(f'Mean of original: {meanY:.3f}')
+print(f'Mean of trimmed:  {np.nanmean(Yc):.3f}')
+
+# print the medians
+print(' ')
+print(f'Median of original: {medianY:.3f}')
+print(f'Median of trimmed:  {np.nanmedian(Yc):.3f}')
+
+```
+
+## R version:
+
+```{r}
+# create data
+N = 10000
+Y = exp(sin(rnorm(N)))
+
+# make a copy of the data to manipulate:
+data = tibble(data_index = 1:length(Y), data_value = Y)
+ggplot(data, aes(x = data_value)) + 
+    geom_histogram(bins = 40, fill="#2c7fb8", color="white") + 
+     theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")
+    ) + 
+    labs(y = "", x = "")
+```
+
+```{r}
+# percent to remove (two-tailed)
+k = 4 
+
+# finding threshold in the distribution:
+q = k/2 # percent from each side
+thresh = quantile(data$data_value, c(q/100, 1-q/100))
+
+# data with two-tailed points removed:
+data_twoTailed_rmvd = data %>% 
+    filter(data_value > thresh[1] & data_value < thresh[2])
+
+# confirm the right number of points:
+print(glue("Total dataset size: {nrow(data)}"))
+print(glue("Total dataset size: {nrow(data_twoTailed_rmvd)}"))
+```
+
+```{r}
+# compute the mean and median (also used in the next exercise)
+mean_Y = mean(data$data_value)
+median_Y = median(data$data_value)
+
+mean_Ytrimmed = mean(data_twoTailed_rmvd$data_value)
+median_Ytrimmed = median(data_twoTailed_rmvd$data_value)
+
+# print the means
+print(glue("Mean of original: {sprintf('%.3f', mean_Y)}"))
+print(glue("Mean of trimmed: {sprintf('%.3f', mean_Ytrimmed)}"))
+
+# print the medians
+print(glue("Median of original: {sprintf('%.3f', median_Y)}"))
+print(glue("Median of trimmed: {sprintf('%.3f', median_Ytrimmed)}"))
+
+```
+
+
+# Exercise 3
+
+## Python version:
+
+```{python}
+# the range of k values
+ks = np.arange(1,50,3)
+
+# initialize a results matrix for mean/median
+results = np.zeros((len(ks),2))
+
+
+# the experiment!
+for idx,ki in enumerate(ks):
+
+  # make a new copy of the original data
+  Yc = Y.copy() # Note: Y was defined in Exercise 2
+
+  # convert that to a number of data points to remove from each tail
+  pnts2nan = int( (ki/2)/100 * N )
+
+  # nan the two tails separately
+  Yc[sort_idx[:pnts2nan]]  = np.nan
+  Yc[sort_idx[-pnts2nan:]] = np.nan
+
+  # collect mean and median
+  results[idx,0] = 100*(np.nanmean(Yc)-meanY) / meanY
+  results[idx,1] = 100*(np.nanmedian(Yc)-medianY) / medianY
+
+  print(f'Total/valid dataset size: {len(Yc)} -> {np.sum(~np.isnan(Yc))}')
+```
+
+
+```{python}
+# plot the results
+plt.figure(figsize=(8,4))
+plt.plot(ks,results[:,0],'s-',color=[.6,.6,.6],markerfacecolor=[.8,.8,.8],markersize=10,label='Mean')
+plt.plot(ks,results[:,1],'o-',color='k',markerfacecolor=[.4,.4,.4],markersize=10,label='Median')
+plt.legend()
+plt.xlabel('k% to trim')
+plt.ylabel(r'Descriptive value (%$\Delta$)')
+
+plt.tight_layout()
+plt.show()
+```
+
+
+## R version
+
+```{r}
+# the range of k values
+ks = seq(1, 50, 3)
+
+# initialize a results matrix for mean/median
+results = matrix(0, length(ks), 2)
+
+# the experiment!
+for (idx in seq_along(ks)) {
+    #idx = 1
+    # convert that to a number of data points to remove from each tail:
+    q = ks[idx]/2
+    # get the thresholds:
+    thresh = quantile(data$data_value, c(q/100, 1-q/100))
+    
+    # get the remaining data points:
+    data_temp = data %>% 
+        filter(data_value > thresh[1] & data_value < thresh[2])
+    # collect mean and median and calculate % difference from original ones:
+    results[idx, 1] = 100*(mean(data_temp$data_value) - mean(data$data_value)) / mean(data$data_value)
+    results[idx, 2] = 100*(median(data_temp$data_value) - median(data$data_value)) / median(data$data_value)
+    
+    print(glue("Total/valid dataset size: {nrow(data)} -> {nrow(data_temp)}"))
+}
+
+```
+
+```{r}
+
+ggplot(tibble(data_index = ks, mean = results[,1], median = results[,2])) + 
+    geom_point(
+        aes(x = data_index, y = mean, 
+            color = "Mean",
+            fill = "Mean",
+            shape = "Mean"
+            ),
+        size=4
+    ) + 
+    geom_line(aes(x = data_index, y = mean, color = "Mean")) + 
+    geom_point(
+        aes(x = data_index, y = median,
+            color = "Median", 
+            fill = "Median", 
+            shape = "Median"),
+        size=4
+    ) + 
+    geom_line(aes(x = data_index, y = median, color="Median")) +
+    scale_shape_manual(
+        values = c("Mean" = 22,
+                   "Median" = 21)
+    ) + 
+    scale_color_manual(
+        values = c("Mean" = "#bdbdbd",
+                   "Median" = "#525252")
+    ) + 
+    scale_fill_manual(
+        values = c("Mean" = "#bdbdbd",
+                   "Median" = "#525252")
+    ) +
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.title = element_text(size=14),
+        axis.text = element_text(size=12),
+        axis.line = element_line(colour = "black"),
+        legend.position = c(.1,.1),
+        legend.title = element_blank(),
+        legend.box.background = element_rect(color="gray", linewidth = 1),
+        legend.text = element_text(size = 12),
+        legend.key = element_blank(),
+        legend.key.width = unit(1, "cm") 
+    ) + 
+    labs(fill= "", color = "", shape = "", 
+         y = expression(paste("Descriptive value (%",Delta,")")), x = "k% to trim")
+    
+```
+
+# Exercise 4
+
+## Python version:
+
+```{python}
+# create data
+N = 1000
+X = np.random.f(5,100,size=N)
+
+# zscore data
+Xz = (X-np.mean(X)) / np.std(X,ddof=1)
+zThresh = 3
+
+# clean data
+Xclean = X[Xz<zThresh]
+
+# report number of removed data points
+print(f'Original sample size: {N}')
+print(f'Cleaned sample size:  {len(Xclean)}')
+print(f'Percent data removed: {100*(1-len(Xclean)/N):.2f}%')
+```
+
+```{python}
+# histogram bins using FD rule
+y_fd_all = np.histogram(X,bins='fd')
+y_fd_clean = np.histogram(Xclean,bins='fd')
+
+# histogram bins using set boundaries
+# Note that I create the bin boundaries using k+1 numbers, then input that vector of boundaries into np.histogram
+edges = np.linspace(np.min(X),np.max(X),41)
+y_40_all = np.histogram(X,bins=edges)
+y_40_clean = np.histogram(Xclean,bins=edges)
+
+
+# plotting the histograms
+_,axs = plt.subplots(2,1,figsize=(8,7))
+axs[0].plot((y_fd_all[1][:-1]+y_fd_all[1][1:])/2,y_fd_all[0],'ks-',
+         label='Pre-cleaned',markersize=11,markerfacecolor=(.6,.6,.6))
+axs[0].plot((y_fd_clean[1][:-1]+y_fd_clean[1][1:])/2,y_fd_clean[0],'ko-',
+         label='Cleaned',markersize=10,markerfacecolor=(.9,.9,.9))
+axs[0].set_title(r'$\bf{A}$)  Histograms using F-D rule')
+
+axs[1].plot((y_40_all[1][:-1]+y_40_all[1][1:])/2,y_40_all[0],'ks-',
+         label='Pre-cleaned',markersize=11,markerfacecolor=(.6,.6,.6))
+axs[1].plot((y_40_clean[1][:-1]+y_40_clean[1][1:])/2,y_40_clean[0],'ko-',
+         label='Cleaned',markersize=10,markerfacecolor=(.9,.9,.9))
+axs[1].set_title(r'$\bf{B}$)  Histograms using 40 bins')
+
+
+# axis adjustments
+for a in axs:
+  a.legend()
+  a.set(xlabel='F value',ylabel='Count',
+        xlim=[np.min(X)-.02,np.max(X)+.02],xticks=range(6))
+
+plt.tight_layout()
+plt.savefig('dataQC_ex4.png')
+plt.show()
+```
+
+## R Version
+
+```{r}
+# create data
+N = 1000
+x = rf(df1 = 5, df2 = 100, n = N)
+
+# zscore data
+xZ= (x - mean(x)) / sd(x) # sd uses n-1 dof
+zThresh = 3
+
+# clean data
+xClean = x[xZ < zThresh]
+
+# report number of removed data points:
+print(glue("Original sample size: {N}"))
+print(glue("Cleaned sample size: {length(xClean)}"))
+print(glue("Percent data removed: {sprintf('%.2f', 100*(1 - length(xClean)/N))}%"))
+```
+
+
+```{r}
+#| label: plot-exercise3-r
+#| warning: false
+#| message: false
+# create data
+N = 1000
+x = rf(df1 = 5, df2 = 100, n = N)
+
+# zscore data
+xZ= (x - mean(x)) / sd(x) # sd uses n-1 dof
+zThresh = 3
+
+# clean data
+xClean = x[xZ < zThresh]
+
+# report number of removed data points:
+print(glue("Original sample size: {N}"))
+print(glue("Cleaned sample size: {length(xClean)}"))
+print(glue("Percent data removed: {sprintf('%.2f', 100*(1 - length(xClean)/N))}%"))
+
+# histogram bins using FD rule
+y_fd_all = hist(x, breaks = "FD", plot=F)
+y_fd_clean = hist(xClean, breaks = "FD", plot=F)
+
+# creating dataframe
+convert_to_DF = function(y){
+    len_ = length(y$breaks)
+    df_ = tibble(
+        data_index = (y$breaks[1:(len_-1)] + y$breaks[2:len_])/2, # take the mean of the breaksa
+        data_value = y$counts
+    )
+    return (df_)
+}
+
+y_fd_all = convert_to_DF(y_fd_all)
+y_fd_clean = convert_to_DF(y_fd_clean)
+
+# histogram bins using set boundaries
+# Note that I create the bin boundaries using k+1 numbers, then input that 
+# vector of boundaries into np.histogram
+edges = seq(min(x), max(x), length=41)
+y_40_all = hist(x, breaks = edges, plot=F)
+y_40_clean = hist(xClean, breaks = edges, plot=F)
+
+# convert to DF:
+y_40_all = convert_to_DF(y_40_all)
+y_40_clean = convert_to_DF(y_40_clean)
+
+# plotting the histograms:
+pA = ggplot() + 
+    geom_line(
+        data = y_fd_all,
+        aes(x = data_index, y = data_value,
+            color = "Pre-cleaned",
+        ),
+        size = .5
+    ) +
+    geom_point(
+        data = y_fd_all,
+        aes(x = data_index, y = data_value,
+            color = "Pre-cleaned", 
+            fill = "Pre-cleaned",
+            shape = "Pre-cleaned"
+        ),
+        size = 4,
+        stroke = .2
+    ) +
+    geom_line(
+        data = y_fd_clean,
+        aes(x = data_index, y = data_value,
+            color = "Cleaned"
+        ),
+        size = 0.5
+    ) + 
+    geom_point(
+        data = y_fd_clean,
+        aes(x = data_index, y = data_value,
+            color = "Cleaned",
+            fill = "Cleaned",
+            shape = "Cleaned"
+        ),
+        size = 3,
+        stroke = .5
+    ) + 
+    scale_shape_manual(
+        name = "",
+        values = c(
+            "Pre-cleaned" = 22,
+            "Cleaned" = 21
+        )
+    )  +
+    scale_color_manual(
+        name = "",
+        values = c(
+            "Cleaned" = "#252525",
+            "Pre-cleaned" = "#252525"
+        )
+    ) + 
+    scale_fill_manual(
+        name = "",
+        values = c(
+            "Cleaned" = "#bdbdbd",
+            "Pre-cleaned" = "#525252"
+        )
+    )  +
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.title = element_text(size=14),
+        axis.text = element_text(size=12),
+        axis.line = element_line(colour = "black"),
+        legend.position = c(.8,.9),
+        legend.title = element_blank(),
+        legend.box.background = element_rect(color="gray", linewidth = 1),
+        legend.text = element_text(size = 12),
+        legend.key = element_blank(),
+        legend.key.width = unit(1, "cm") 
+    ) + 
+    labs(fill= "", color = "", shape = "", 
+         title = bquote(bold("A)")~"Histogram using F-D rule"),
+         y = "Count", x = "F value")
+
+
+
+pB = ggplot() + 
+    geom_line(
+        data = y_40_all,
+        aes(x = data_index, y = data_value,
+            color = "Pre-cleaned",
+        ),
+        size = .5
+    ) +
+    geom_point(
+        data = y_40_all,
+        aes(x = data_index, y = data_value,
+            color = "Pre-cleaned", 
+            fill = "Pre-cleaned",
+            shape = "Pre-cleaned"
+        ),
+        size = 4,
+        stroke = .2
+    ) +
+    geom_line(
+        data = y_40_clean,
+        aes(x = data_index, y = data_value,
+            color = "Cleaned"
+        ),
+        size = 0.5
+    ) + 
+    geom_point(
+        data = y_40_clean,
+        aes(x = data_index, y = data_value,
+            color = "Cleaned",
+            fill = "Cleaned",
+            shape = "Cleaned"
+        ),
+        size = 3,
+        stroke = .5
+    ) + 
+    scale_shape_manual(
+        name = "",
+        values = c(
+            "Pre-cleaned" = 22,
+            "Cleaned" = 21
+        )
+    )  +
+    scale_color_manual(
+        name = "",
+        values = c(
+            "Cleaned" = "#252525",
+            "Pre-cleaned" = "#252525"
+        )
+    ) + 
+    scale_fill_manual(
+        name = "",
+        values = c(
+            "Cleaned" = "#bdbdbd",
+            "Pre-cleaned" = "#525252"
+        )
+    )  +
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.title = element_text(size=14),
+        axis.text = element_text(size=12),
+        axis.line = element_line(colour = "black"),
+        legend.position = c(.8,.9),
+        legend.title = element_blank(),
+        legend.box.background = element_rect(color="gray", linewidth = 1),
+        legend.text = element_text(size = 12),
+        legend.key = element_blank(),
+        legend.key.width = unit(1, "cm") 
+    ) + 
+    labs(fill= "", color = "", shape = "", 
+         title = bquote(bold("B)")~"Histogram using 40 bins"),
+         y = "Count", x = "F value")
+
+
+pExercise4 = pA + pB + plot_layout(ncol=1)
+pExercise4
+```
+
+
+# Exercise 5
+
+## Python version:
+
+```{python}
+# url reference: https://archive.ics.uci.edu/ml/datasets/Arrhythmia
+
+# import data
+df = pd.read_csv('https://archive.ics.uci.edu/ml/machine-learning-databases/arrhythmia/arrhythmia.data',
+                 usecols = np.arange(9),
+                 names   = ['age','sex','height','weight','qrs','p-r','q-t','t','p'])
+
+# inspect
+df.head()
+```
+
+
+```{python}
+# boxplots of raw data
+plt.figure(figsize=(10,5))
+sns.boxplot(data=df).set(xlabel='Data feature',ylabel='Data value')
+plt.show()
+```
+
+```{python}
+# make a copy of the original data matrix
+df_z = df.copy()
+
+for col in df_z.columns:
+  if not (col=='sex'):
+    df_z[col] = (df[col] - df[col].mean()) / df[col].std(ddof=1)
+
+# inspect again
+df_z
+```
+
+```{python}
+# box plots of z-scored data
+plt.figure(figsize=(10,5))
+sns.boxplot(data=df_z).set(xlabel='Data feature',ylabel='Data value')
+plt.show()
+```
+
+```{python}
+# Note: this cell combines the previous graphs to make one figure for the book
+_,axs = plt.subplots(2,1,figsize=(10,7))
+sns.boxplot(data=df,  ax=axs[0]).set(xticks=[],ylabel='Data value')
+axs[0].set_title(r'$\bf{A}$)  Raw data')
+sns.boxplot(data=df_z,ax=axs[1]).set(xlabel='Data feature',ylabel='Transformed data value')
+axs[1].set_title(r'$\bf{B}$)  Z-transformed data')
+
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+# Note: this cell combines the previous graphs to make one figure for the book
+_,axs = plt.subplots(2,1,figsize=(10,7))
+sns.boxplot(data=df,  ax=axs[0]).set(xticks=[],ylabel='Data value')
+axs[0].set_title(r'$\bf{A}$)  Raw data')
+sns.boxplot(data=df_z,ax=axs[1]).set(xlabel='Data feature',ylabel='Transformed data value')
+axs[1].set_title(r'$\bf{B}$)  Z-transformed data')
+
+plt.tight_layout()
+
+plt.show()
+```
+
+
 
