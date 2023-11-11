@@ -7,6 +7,10 @@ format:
         code-tools: true
         self-contained: true
 engine: knitr
+execute: 
+  cache: true
+  fig-width: 10
+  fig-height: 5
 ---
 
 ```{python}
@@ -33,7 +37,7 @@ plt.rcParams.update(
 )
 
 # setting seed
-np.random.seed(0)
+np.random.seed(10)
 ```
 
 ```{r}
@@ -102,20 +106,20 @@ xA=c(rnorm(20), rnorm(80)*80)
 data_A = tibble(data_index=1:length(xA), data_value = xA)
 
 pA = ggplot(data_A, aes(x=data_index, y = data_value)) +
-    geom_point(
-        shape=22,
-        size=3,
-        fill = "gray",
-        alpha=.8
-    ) + 
-    theme(
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        panel.background = element_blank(), 
-        axis.line = element_line(colour = "black"),
-    ) + 
-    labs(title = bquote(bold("A)")~"Unexpected data range"),
-         y = "Data value", x = "Data index")
+  geom_point(
+    shape=22,
+    size=3,
+    fill = "gray",
+    alpha=.8
+  ) + 
+  theme(
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(),
+      panel.background = element_blank(), 
+      axis.line = element_line(colour = "black"),
+  ) + 
+  labs(title = bquote(bold("A)")~"Unexpected data range"),
+       y = "Data value", x = "Data index")
 
 # panel B: distribution shape
 xB = c(5+rnorm(150), exp(1+rnorm(150)))
@@ -217,6 +221,7 @@ p7.4 = ggplot(data, aes(x = data_index, y = data_value)) +
         fill = "gray",
         alpha=.8
     ) + 
+    xlim(-2, N+1) + 
     theme(
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
@@ -1278,6 +1283,8 @@ sns.boxplot(data=df).set(xlabel='Data feature',ylabel='Data value')
 plt.show()
 ```
 
+
+
 ```{python}
 # make a copy of the original data matrix
 df_z = df.copy()
@@ -1297,6 +1304,7 @@ sns.boxplot(data=df_z).set(xlabel='Data feature',ylabel='Data value')
 plt.show()
 ```
 
+
 ```{python}
 # Note: this cell combines the previous graphs to make one figure for the book
 _,axs = plt.subplots(2,1,figsize=(10,7))
@@ -1309,18 +1317,129 @@ plt.tight_layout()
 plt.show()
 ```
 
-```{python}
-# Note: this cell combines the previous graphs to make one figure for the book
-_,axs = plt.subplots(2,1,figsize=(10,7))
-sns.boxplot(data=df,  ax=axs[0]).set(xticks=[],ylabel='Data value')
-axs[0].set_title(r'$\bf{A}$)  Raw data')
-sns.boxplot(data=df_z,ax=axs[1]).set(xlabel='Data feature',ylabel='Transformed data value')
-axs[1].set_title(r'$\bf{B}$)  Z-transformed data')
 
-plt.tight_layout()
 
-plt.show()
+## R version
+
+```{r}
+#| message: false
+#| warning: false
+
+# import data
+library(readr)
+data <- read_csv(
+    'https://archive.ics.uci.edu/ml/machine-learning-databases/arrhythmia/arrhythmia.data',
+    col_select = 1:9,
+    col_names = c('age','sex','height','weight','qrs','p-r','q-t','t','p')
+)
+
+# inspect
+head(data, 5)
+```
+
+```{r}
+ggplot(stack(data), aes(x = ind, y = values, fill=ind)) +
+    geom_boxplot() + 
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.title = element_text(size=14),
+        axis.text = element_text(size=12),
+        axis.line = element_line(colour = "black"),
+        legend.position = "none",
+        legend.title = element_blank(),
+        legend.box.background = element_rect(color="gray", linewidth = 1),
+        legend.text = element_text(size = 12),
+        legend.key = element_blank(),
+        legend.key.width = unit(1, "cm") 
+    ) + 
+    labs(fill= "", color = "", shape = "", 
+         title = "",
+         y = "Data value", x = "Data features")
 ```
 
 
+```{r}
+# scale the data:
+cols_ = setdiff(names(data), "sex") # all columns, but 'sex' feature
+dataZ = data %>% 
+    mutate(across(all_of(cols_), function(x) (x - mean(x))/sd(x)))
+# inspecting again
+head(dataZ)
+```
+
+
+```{r}
+# box plots of z-scored
+ggplot(stack(dataZ), aes(x = ind, y = values, fill=ind)) +
+    geom_boxplot() + 
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.title = element_text(size=14),
+        axis.text = element_text(size=12),
+        axis.line = element_line(colour = "black"),
+        legend.position = "none",
+        legend.title = element_blank(),
+        legend.box.background = element_rect(color="gray", linewidth = 1),
+        legend.text = element_text(size = 12),
+        legend.key = element_blank(),
+        legend.key.width = unit(1, "cm") 
+    ) + 
+    labs(fill= "", color = "", shape = "", 
+         title = "",
+         y = "Data value", x = "Data features")
+
+```
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+# Note: this cell combines the previous graphs to make one figure for the book
+p_boxPlot_all = ggplot(stack(data), aes(x = ind, y = values, fill=ind)) +
+    geom_boxplot() + 
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.title = element_text(size=14),
+        axis.text = element_text(size=12),
+        axis.line = element_line(colour = "black"),
+        legend.position = "none",
+        legend.title = element_blank(),
+        legend.box.background = element_rect(color="gray", linewidth = 1),
+        legend.text = element_text(size = 12),
+        legend.key = element_blank(),
+        legend.key.width = unit(1, "cm") 
+    ) + 
+    labs(fill= "", color = "", shape = "", 
+         title = bquote(bold("A)")~"Raw data"),
+         y = "Data value", x = "")
+p_boxPlot_all
+
+# box plots of z-scored
+p_boxPlot_z = ggplot(stack(dataZ), aes(x = ind, y = values, fill=ind)) +
+    geom_boxplot() + 
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.title = element_text(size=14),
+        axis.text = element_text(size=12),
+        axis.line = element_line(colour = "black"),
+        legend.position = "none",
+        legend.title = element_blank(),
+        legend.box.background = element_rect(color="gray", linewidth = 1),
+        legend.text = element_text(size = 12),
+        legend.key = element_blank(),
+        legend.key.width = unit(1, "cm") 
+    ) + 
+    labs(fill= "", color = "", shape = "", 
+         title = bquote(bold("B)")~"Z-transformed data"),
+         y = "Data value", x = "Data features")
+
+p_boxPlot = p_boxPlot_all + p_boxPlot_z + plot_layout(ncol = 1)
+p_boxPlot
+```
 
