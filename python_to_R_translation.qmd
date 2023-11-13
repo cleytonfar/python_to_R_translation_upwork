@@ -9,8 +9,10 @@ format:
 engine: knitr
 execute: 
   cache: true
-  fig-width: 10
-  fig-height: 5
+  fig-width: 6.4
+  fig-height: 4.8
+  warning: false
+  messages: false
 ---
 
 ```{python}
@@ -49,6 +51,7 @@ np.random.seed(10)
 # Attaching packages
 library(dplyr)
 library(glue)
+library(stringr)
 library(ggplot2)
 library(patchwork)
 
@@ -100,6 +103,8 @@ plt.show()
 ## R version:
 ```{r}
 #| message: false
+#| fig-width: 12
+#| fig-height: 6
 
 # panel A: unexpected range
 xA=c(rnorm(20), rnorm(80)*80)
@@ -108,7 +113,7 @@ data_A = tibble(data_index=1:length(xA), data_value = xA)
 pA = ggplot(data_A, aes(x=data_index, y = data_value)) +
   geom_point(
     shape=22,
-    size=3,
+    size=5,
     fill = "gray",
     alpha=.8
   ) + 
@@ -117,6 +122,10 @@ pA = ggplot(data_A, aes(x=data_index, y = data_value)) +
       panel.grid.minor = element_blank(),
       panel.background = element_blank(), 
       axis.line = element_line(colour = "black"),
+      axis.ticks.x = element_blank(),
+      axis.text.x = element_blank(),
+      axis.title = element_text(size=15),
+      title = element_text(size=15)
   ) + 
   labs(title = bquote(bold("A)")~"Unexpected data range"),
        y = "Data value", x = "Data index")
@@ -131,7 +140,11 @@ pB = ggplot(data_B, aes(x=data_value))+
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
-        axis.line = element_line(colour = "black")
+        axis.line = element_line(colour = "black"),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.title = element_text(size=15),
+        title = element_text(size=15)
     ) + 
     labs(title = bquote(bold("B)")~"Nonstandard distribution"),
          y = "Count", x = "Data value")
@@ -146,7 +159,11 @@ pC = ggplot(data_C, aes(x=data_value))+
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
-        axis.line = element_line(colour = "black")
+        axis.line = element_line(colour = "black"),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.title = element_text(size=15),
+        title = element_text(size=15)
     ) + 
     labs(title = bquote(bold("C)")~"Mixed dataset"),
          y = "Count", x = "Data value")
@@ -160,7 +177,7 @@ data_D[84, "data_value"] = 14
 pD = ggplot(data_D, aes(x = 1:nrow(data_D), y = data_value)) +
     geom_point(
         shape=22,
-        size=3,
+        size=5,
         fill = "gray",
         alpha=.8
     ) + 
@@ -168,7 +185,11 @@ pD = ggplot(data_D, aes(x = 1:nrow(data_D), y = data_value)) +
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
-        axis.line = element_line(colour = "black")
+        axis.line = element_line(colour = "black"),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.title = element_text(size=15),
+        title = element_text(size=15)
     ) + 
     labs(title = bquote(bold("D)")~"Outliers"),
          y = "Data value", x = "Data index")
@@ -205,6 +226,8 @@ plt.show()
 ## R version:
 
 ```{r}
+#| fig-width: 8
+#| fig-height: 4
 # Create normally distributed data
 N = 100
 y = rnorm(N)
@@ -217,7 +240,7 @@ data[sample(N, 2), "data_value"] = runif(2, min=2, max=3)^2
 p7.4 = ggplot(data, aes(x = data_index, y = data_value)) + 
     geom_point(
         shape=22, 
-        size=3,
+        size=5,
         fill = "gray",
         alpha=.8
     ) + 
@@ -226,7 +249,10 @@ p7.4 = ggplot(data, aes(x = data_index, y = data_value)) +
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
-        axis.line = element_line(colour = "black")
+        axis.line = element_line(colour = "black"),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        title = element_text(size=15)
     ) +
     labs(y = "Data value", x = "Data index")
 
@@ -272,6 +298,9 @@ plt.show()
 ## R version:
 
 ```{r}
+#| fig-width: 10
+#| fig-height: 4
+
 # outlier threshold
 zThreshold = 3.09
 
@@ -290,15 +319,18 @@ data = tibble(data_index = 1:length(data), data_value = data)
 p1 = ggplot(data, aes(x = data_index, y = data_value)) + 
     geom_point(
         shape=22, 
-        size=3,
-        fill = "gray",
+        size=5,
+        fill = "#969696",
         alpha=.8
     ) + 
     theme(
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
-        axis.line = element_line(colour = "black")
+        axis.line = element_line(colour = "black"),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        title = element_text(size=15)
     ) + 
     labs(title = bquote(bold("A)")~"Original data"),
          y = "Data value", x = "Data index")
@@ -308,7 +340,7 @@ dataZ = tibble(data_index = 1:length(dataZ), data_value = dataZ)
 p2 = ggplot(dataZ, aes(x=data_index, y = data_value)) + 
     geom_point(
           shape=22, 
-          size=3,
+          size=5,
           fill = "gray",
           alpha=.8
     ) + 
@@ -316,6 +348,7 @@ p2 = ggplot(dataZ, aes(x=data_index, y = data_value)) +
         data = dataZ[outliers,],
         aes(x = data_index, y=data_value),
         shape=7,
+        stroke=1,
         size=3,
         fill = "gray",
         alpha=.8
@@ -330,7 +363,10 @@ p2 = ggplot(dataZ, aes(x=data_index, y = data_value)) +
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
-        axis.line = element_line(colour = "black")
+        axis.line = element_line(colour = "black"),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        title = element_text(size=15)
     ) + 
     labs(title = bquote(bold("A)")~"Z-transformed data"),
          y = "Transformed data value", x = "Data index")
@@ -377,6 +413,9 @@ plt.show()
 ## R version:
 
 ```{r}
+#| fig-width: 10
+#| fig-height: 4
+
 # create some raw data
 N = 10 # sample size
 data = exp(rnorm(N)/2) + 5
@@ -390,9 +429,8 @@ data = tibble(data_index = 1:length(data), data_value = data)
 pA = ggplot(data, aes(x = data_index, y = data_value)) +
     geom_point(
         shape=22, 
-        size=3,
-        fill = "gray",
-        alpha=.8
+        size=5,
+        fill = "gray"
     ) + 
     theme(
         panel.grid.major = element_blank(), 
@@ -400,7 +438,10 @@ pA = ggplot(data, aes(x = data_index, y = data_value)) +
         panel.background = element_blank(), 
         axis.line = element_line(colour = "black"),
         axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()
+        axis.ticks.x=element_blank(),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        title = element_text(size=15)
     ) + 
     labs(title = bquote(bold("A)")~"Raw data"),
          y = "Raw data value", x = "Data index")
@@ -415,14 +456,14 @@ pB = ggplot(dataZ,
            group = data_index,
            shape=id,
            fill=id)) + 
-    geom_point(
-        size=3,
-        alpha=.8
-    ) + 
-    geom_line(
+  geom_line(
         linetype="dashed", 
         linewidth=.3
-    )+
+    ) +
+    geom_point(
+        size=5
+    ) + 
+    
     scale_shape_manual(values=c("Z with outlier" = 22,
                                 "Z without outlier" = 21)) + 
     scale_fill_manual(values=c("Z with outlier" = "#bdbdbd",
@@ -432,13 +473,21 @@ pB = ggplot(dataZ,
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
         axis.line = element_line(colour = "black"),
-        legend.position="top",
         axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()
+        axis.ticks.x=element_blank(),
+        legend.position = c(.8,.9),
+        legend.title = element_blank(),
+        legend.box.background = element_rect(color="gray", linewidth = 1),
+        legend.text = element_text(size = 12),
+        legend.key = element_blank(),
+        legend.key.width = unit(1, "cm"),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        title = element_text(size=15)
     ) + 
     labs(shape="", fill="",
          title = bquote(bold("B)")~"Z-transformed data"),
-         y = "Raw data value", x = "Data index")
+         y = "Transformed data value", x = "Data index")
 
 p7.7 = pA + pB
 p7.7
@@ -496,6 +545,9 @@ plt.show()
 ## R Version:
 
 ```{r}
+#| fig-width: 8
+#| fig-height: 6
+
 N = 74
 y = rnorm(N)^3
 data = tibble(data_index=1:length(y), data_value=y)
@@ -510,15 +562,15 @@ smallest = tail(data, k)
 pA = ggplot(data, aes(x = data_index, y = data_value)) + 
       geom_point(
         shape=22, 
-        size=3,
-        fill = "gray",
-        alpha=.8
+        size=5,
+        fill = "gray"
     ) + 
     geom_point(
         data = largest,
         aes(x = data_index, y = data_value),
         shape=7,
-        size=3,
+        size=5,
+        stroke=1,
         fill = "gray",
         alpha=.8
     ) + 
@@ -526,7 +578,8 @@ pA = ggplot(data, aes(x = data_index, y = data_value)) +
         data = smallest,
         aes(x = data_index, y = data_value),
         shape=7,
-        size=3,
+        size=5,
+        stroke=1,
         fill = "gray",
         alpha=.8
     ) + 
@@ -534,7 +587,10 @@ pA = ggplot(data, aes(x = data_index, y = data_value)) +
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
-        axis.line = element_line(colour = "black")
+        axis.line = element_line(colour = "black"),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        title = element_text(size=15)
     ) + 
     labs(title = bquote(bold("A)")~"Data with k-extreme points trimmed"),
          y = "", x = "")
@@ -555,17 +611,20 @@ pB = ggplot(data = data, aes(x = data_index, y = data_value)) +
     geom_ribbon(
         data = filter(data, data_index <= x[lbndi]), 
         aes(ymax = data_value, ymin=0),
-        fill="#525252") + 
-    geom_vline(xintercept = x[ubndi], linetype="dashed") + 
+        fill="#969696") + 
+     geom_vline(xintercept = x[ubndi], linetype="dashed") + 
      geom_ribbon(
         data = filter(data, data_index >= x[ubndi]), 
         aes(ymax = data_value, ymin=0),
-        fill="#525252") + 
+        fill="#969696") + 
     theme(
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
-        axis.line = element_line(colour = "black")
+        axis.line = element_line(colour = "black"),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        title = element_text(size=15)
     ) + 
     labs(title = bquote(bold("B)")~"Histogram showing trimmed areas"),
          y = "", x = "")
@@ -578,6 +637,7 @@ p7.9
 # Exercise 1
 
 ## Python version:
+
 ```{python}
 ## iterative method
 # Note about this code: Because of random numbers, you are not guaranteed to get a result
@@ -646,8 +706,9 @@ Please, let me know if these changes make sense. In any case, I can follow stric
 
 
 ```{r}
-#| message: false
-#| warning: false
+#| fig-width: 10
+#| fig-height: 4
+
 ## iterative method
 # Note about this code: Because of random numbers, you are not guaranteed to get a result
 # that highlights the method. Try running the code several times.
@@ -675,7 +736,10 @@ p = ggplot() +
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
-        axis.line = element_line(colour = "black")
+        axis.line = element_line(colour = "black"),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        title = element_text(size=15)
     ) + 
     labs(y = "Z-score", x = "Data index")
 
@@ -805,7 +869,10 @@ ggplot(data, aes(x = data_value)) +
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
-        axis.line = element_line(colour = "black")
+        axis.line = element_line(colour = "black"),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        title = element_text(size=15)
     ) + 
     labs(y = "", x = "")
 ```
@@ -896,6 +963,9 @@ plt.show()
 ## R version
 
 ```{r}
+#| fig-width: 8
+#| fig-height: 4
+
 # the range of k values
 ks = seq(1, 50, 3)
 
@@ -923,6 +993,8 @@ for (idx in seq_along(ks)) {
 ```
 
 ```{r}
+#| fig-width: 8
+#| fig-height: 4
 
 ggplot(tibble(data_index = ks, mean = results[,1], median = results[,2])) + 
     geom_point(
@@ -958,15 +1030,16 @@ ggplot(tibble(data_index = ks, mean = results[,1], median = results[,2])) +
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
-        axis.title = element_text(size=14),
-        axis.text = element_text(size=12),
-        axis.line = element_line(colour = "black"),
         legend.position = c(.1,.1),
         legend.title = element_blank(),
         legend.box.background = element_rect(color="gray", linewidth = 1),
         legend.text = element_text(size = 12),
         legend.key = element_blank(),
-        legend.key.width = unit(1, "cm") 
+        legend.key.width = unit(1, "cm"),
+        axis.line = element_line(colour = "black"),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        title = element_text(size=15)
     ) + 
     labs(fill= "", color = "", shape = "", 
          y = expression(paste("Descriptive value (%",Delta,")")), x = "k% to trim")
@@ -1036,34 +1109,13 @@ plt.show()
 ## R Version
 
 ```{r}
-# create data
+#| fig-width: 8
+#| fig-height: 7
 N = 1000
 x = rf(df1 = 5, df2 = 100, n = N)
 
 # zscore data
-xZ= (x - mean(x)) / sd(x) # sd uses n-1 dof
-zThresh = 3
-
-# clean data
-xClean = x[xZ < zThresh]
-
-# report number of removed data points:
-print(glue("Original sample size: {N}"))
-print(glue("Cleaned sample size: {length(xClean)}"))
-print(glue("Percent data removed: {sprintf('%.2f', 100*(1 - length(xClean)/N))}%"))
-```
-
-
-```{r}
-#| label: plot-exercise3-r
-#| warning: false
-#| message: false
-# create data
-N = 1000
-x = rf(df1 = 5, df2 = 100, n = N)
-
-# zscore data
-xZ= (x - mean(x)) / sd(x) # sd uses n-1 dof
+xZ = (x - mean(x)) / sd(x) # sd uses n-1 dof
 zThresh = 3
 
 # clean data
@@ -1075,14 +1127,16 @@ print(glue("Cleaned sample size: {length(xClean)}"))
 print(glue("Percent data removed: {sprintf('%.2f', 100*(1 - length(xClean)/N))}%"))
 
 # histogram bins using FD rule
-y_fd_all = hist(x, breaks = "FD", plot=F)
-y_fd_clean = hist(xClean, breaks = "FD", plot=F)
+edges_fd_all = seq(min(x), max(x), length=nclass.FD(x))
+y_fd_all = hist(x, breaks = edges_fd_all, plot=F)
 
-# creating dataframe
+edges_fd_clean = seq(min(xClean), max(xClean), length=nclass.FD(xClean))
+y_fd_clean = hist(xClean, breaks = edges_fd_clean, plot=F)
+
+# function to creating dataframe
 convert_to_DF = function(y){
-    len_ = length(y$breaks)
     df_ = tibble(
-        data_index = (y$breaks[1:(len_-1)] + y$breaks[2:len_])/2, # take the mean of the breaksa
+        data_index = y$mids,
         data_value = y$counts
     )
     return (df_)
@@ -1118,7 +1172,7 @@ pA = ggplot() +
             fill = "Pre-cleaned",
             shape = "Pre-cleaned"
         ),
-        size = 4,
+        size = 5,
         stroke = .2
     ) +
     geom_line(
@@ -1135,7 +1189,7 @@ pA = ggplot() +
             fill = "Cleaned",
             shape = "Cleaned"
         ),
-        size = 3,
+        size = 4,
         stroke = .5
     ) + 
     scale_shape_manual(
@@ -1163,21 +1217,20 @@ pA = ggplot() +
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
-        axis.title = element_text(size=14),
-        axis.text = element_text(size=12),
-        axis.line = element_line(colour = "black"),
         legend.position = c(.8,.9),
         legend.title = element_blank(),
         legend.box.background = element_rect(color="gray", linewidth = 1),
         legend.text = element_text(size = 12),
         legend.key = element_blank(),
-        legend.key.width = unit(1, "cm") 
+        legend.key.width = unit(1, "cm"),
+        axis.line = element_line(colour = "black"),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        title = element_text(size=15)
     ) + 
     labs(fill= "", color = "", shape = "", 
          title = bquote(bold("A)")~"Histogram using F-D rule"),
          y = "Count", x = "F value")
-
-
 
 pB = ggplot() + 
     geom_line(
@@ -1194,7 +1247,7 @@ pB = ggplot() +
             fill = "Pre-cleaned",
             shape = "Pre-cleaned"
         ),
-        size = 4,
+        size = 5,
         stroke = .2
     ) +
     geom_line(
@@ -1211,7 +1264,7 @@ pB = ggplot() +
             fill = "Cleaned",
             shape = "Cleaned"
         ),
-        size = 3,
+        size = 4,
         stroke = .5
     ) + 
     scale_shape_manual(
@@ -1239,15 +1292,16 @@ pB = ggplot() +
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
-        axis.title = element_text(size=14),
-        axis.text = element_text(size=12),
-        axis.line = element_line(colour = "black"),
         legend.position = c(.8,.9),
         legend.title = element_blank(),
         legend.box.background = element_rect(color="gray", linewidth = 1),
         legend.text = element_text(size = 12),
         legend.key = element_blank(),
-        legend.key.width = unit(1, "cm") 
+        legend.key.width = unit(1, "cm"),
+        axis.line = element_line(colour = "black"),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        title = element_text(size=15)
     ) + 
     labs(fill= "", color = "", shape = "", 
          title = bquote(bold("B)")~"Histogram using 40 bins"),
@@ -1256,6 +1310,7 @@ pB = ggplot() +
 
 pExercise4 = pA + pB + plot_layout(ncol=1)
 pExercise4
+
 ```
 
 
@@ -1267,7 +1322,7 @@ pExercise4
 # url reference: https://archive.ics.uci.edu/ml/datasets/Arrhythmia
 
 # import data
-df = pd.read_csv('https://archive.ics.uci.edu/ml/machine-learning-databases/arrhythmia/arrhythmia.data',
+df = pd.read_csv('http://archive.ics.uci.edu/ml/machine-learning-databases/arrhythmia/arrhythmia.data',
                  usecols = np.arange(9),
                  names   = ['age','sex','height','weight','qrs','p-r','q-t','t','p'])
 
@@ -1328,7 +1383,7 @@ plt.show()
 # import data
 library(readr)
 data <- read_csv(
-    'https://archive.ics.uci.edu/ml/machine-learning-databases/arrhythmia/arrhythmia.data',
+    'http://archive.ics.uci.edu/ml/machine-learning-databases/arrhythmia/arrhythmia.data',
     col_select = 1:9,
     col_names = c('age','sex','height','weight','qrs','p-r','q-t','t','p')
 )
@@ -1338,21 +1393,24 @@ head(data, 5)
 ```
 
 ```{r}
+#| fig-width: 10
+#| fig-height: 5
 ggplot(stack(data), aes(x = ind, y = values, fill=ind)) +
     geom_boxplot() + 
     theme(
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
-        axis.title = element_text(size=14),
-        axis.text = element_text(size=12),
-        axis.line = element_line(colour = "black"),
         legend.position = "none",
         legend.title = element_blank(),
         legend.box.background = element_rect(color="gray", linewidth = 1),
         legend.text = element_text(size = 12),
         legend.key = element_blank(),
-        legend.key.width = unit(1, "cm") 
+        legend.key.width = unit(1, "cm"),
+        axis.line = element_line(colour = "black"),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        title = element_text(size=15)
     ) + 
     labs(fill= "", color = "", shape = "", 
          title = "",
@@ -1371,6 +1429,8 @@ head(dataZ)
 
 
 ```{r}
+#| fig-width: 10
+#| fig-height: 5
 # box plots of z-scored
 ggplot(stack(dataZ), aes(x = ind, y = values, fill=ind)) +
     geom_boxplot() + 
@@ -1378,15 +1438,16 @@ ggplot(stack(dataZ), aes(x = ind, y = values, fill=ind)) +
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
-        axis.title = element_text(size=14),
-        axis.text = element_text(size=12),
-        axis.line = element_line(colour = "black"),
         legend.position = "none",
         legend.title = element_blank(),
         legend.box.background = element_rect(color="gray", linewidth = 1),
         legend.text = element_text(size = 12),
         legend.key = element_blank(),
-        legend.key.width = unit(1, "cm") 
+        legend.key.width = unit(1, "cm") ,
+        axis.line = element_line(colour = "black"),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        title = element_text(size=15)
     ) + 
     labs(fill= "", color = "", shape = "", 
          title = "",
@@ -1395,7 +1456,7 @@ ggplot(stack(dataZ), aes(x = ind, y = values, fill=ind)) +
 ```
 ```{r}
 #| fig-width: 10
-#| fig-height: 5
+#| fig-height: 7
 # Note: this cell combines the previous graphs to make one figure for the book
 p_boxPlot_all = ggplot(stack(data), aes(x = ind, y = values, fill=ind)) +
     geom_boxplot() + 
@@ -1403,15 +1464,16 @@ p_boxPlot_all = ggplot(stack(data), aes(x = ind, y = values, fill=ind)) +
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
-        axis.title = element_text(size=14),
-        axis.text = element_text(size=12),
-        axis.line = element_line(colour = "black"),
         legend.position = "none",
         legend.title = element_blank(),
         legend.box.background = element_rect(color="gray", linewidth = 1),
         legend.text = element_text(size = 12),
         legend.key = element_blank(),
-        legend.key.width = unit(1, "cm") 
+        legend.key.width = unit(1, "cm"),
+        axis.line = element_line(colour = "black"),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        title = element_text(size=15)
     ) + 
     labs(fill= "", color = "", shape = "", 
          title = bquote(bold("A)")~"Raw data"),
@@ -1425,15 +1487,16 @@ p_boxPlot_z = ggplot(stack(dataZ), aes(x = ind, y = values, fill=ind)) +
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
-        axis.title = element_text(size=14),
-        axis.text = element_text(size=12),
         axis.line = element_line(colour = "black"),
         legend.position = "none",
         legend.title = element_blank(),
         legend.box.background = element_rect(color="gray", linewidth = 1),
         legend.text = element_text(size = 12),
         legend.key = element_blank(),
-        legend.key.width = unit(1, "cm") 
+        legend.key.width = unit(1, "cm"),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        title = element_text(size=15)
     ) + 
     labs(fill= "", color = "", shape = "", 
          title = bquote(bold("B)")~"Z-transformed data"),
@@ -1441,5 +1504,180 @@ p_boxPlot_z = ggplot(stack(dataZ), aes(x = ind, y = values, fill=ind)) +
 
 p_boxPlot = p_boxPlot_all + p_boxPlot_z + plot_layout(ncol = 1)
 p_boxPlot
+```
+
+
+# Exercise 6
+
+## Python version:
+
+```{python}
+# remove based on z-score threshold
+zThresh = 3.09 # p<.001
+
+df_clean = df.copy()
+df_clean[df_z>zThresh]  = np.nan # positive tail
+df_clean[df_z<-zThresh] = np.nan # negative tail
+
+```
+
+```{python}
+# plot
+_,axs = plt.subplots(2,1,figsize=(10,7))
+sns.boxplot(data=df,ax=axs[0]).set(xticks=[],ylabel='Data value')
+axs[0].set_title(r'$\bf{A}$)  Raw data')
+sns.boxplot(data=df_clean,ax=axs[1]).set(xlabel='Data feature',ylabel='Data value')
+axs[1].set_title(r'$\bf{B}$)  Cleaned data')
+
+plt.tight_layout()
+plt.savefig('dataQC_ex6a.png')
+plt.show()
+```
+
+```{python}
+# print the means
+raw_means = df.mean().values
+cleaned_means = df_clean.mean().values
+
+for name,pre,post in zip(df.columns,raw_means,cleaned_means):
+  print(f'{name:>6}: {pre:6.2f}  ->  {post:6.2f}')
+```
+
+
+```{python}
+# compute percent change
+pctchange = 100*(cleaned_means-raw_means) / raw_means
+
+# and plot
+plt.figure(figsize=(9,4))
+plt.plot(pctchange,'ks',markersize=14,markerfacecolor=(.7,.7,.7))
+plt.axhline(0,color='k',linewidth=2,zorder=-1)
+plt.xticks(range(9),labels=df.columns)
+plt.ylabel('Percent')
+plt.title('Change in feature means after z-score data rejection',loc='center')
+plt.grid()
+
+plt.tight_layout()
+plt.savefig('dataQC_ex6b.png')
+plt.show()
+```
+
+
+## R version :
+
+```{r}
+# remove based on z-score threshold
+zThresh = 3.09 # p<.001
+
+# creating copy:
+data_clean = data
+# loop over all columns
+for (col_ in colnames(dataZ)) {
+    data_clean[[col_]][dataZ[[col_]] > zThresh] = NA
+    data_clean[[col_]][dataZ[[col_]] < -zThresh] = NA
+}
+```
+
+
+```{r}
+#| fig-width: 10
+#| fig-height: 7
+pA = ggplot(stack(data), aes(x = ind, y = values, fill=ind)) +
+    geom_boxplot() + 
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        legend.position = "none",
+        legend.title = element_blank(),
+        legend.box.background = element_rect(color="gray", linewidth = 1),
+        legend.text = element_text(size = 12),
+        legend.key = element_blank(),
+        legend.key.width = unit(1, "cm"),
+        axis.line = element_line(colour = "black"),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        title = element_text(size=15)
+    ) + 
+    labs(fill= "", color = "", shape = "", 
+         title = "",
+         y = "Data value", x = "")
+
+pB = ggplot(stack(data_clean), aes(x = ind, y = values, fill=ind)) +
+    geom_boxplot() + 
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        
+        legend.position = "none",
+        legend.title = element_blank(),
+        legend.box.background = element_rect(color="gray", linewidth = 1),
+        legend.text = element_text(size = 12),
+        legend.key = element_blank(),
+        legend.key.width = unit(1, "cm"),
+        axis.line = element_line(colour = "black"),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        title = element_text(size=15)
+    ) + 
+    labs(fill= "", color = "", shape = "", 
+         title = "",
+         y = "Data value", x = "Data features")
+
+pA + pB + plot_layout(ncol=1)
+
+```
+
+```{r}
+
+# print the means
+raw_means = data %>% 
+    summarize(across(everything(), mean))
+
+clean_means = data_clean %>% 
+    summarize(across(everything(), ~mean(.x, na.rm=T)))
+
+for (col_ in colnames(data)) {
+  print(glue('{str_pad(col_, 6, "left", " ")}: {sprintf("%6.2f", raw_means[[col_]])}  ->  {sprintf("%6.2f", clean_means[[col_]])}'))
+}
+
+```
+
+```{r}
+#| fig-width: 9
+#| fig-height: 4
+
+# compute percent change
+pctchange = 100*(clean_means - raw_means) / raw_means
+
+ggplot(data=stack(pctchange), aes(x = ind, y = values)) + 
+    geom_hline(
+        yintercept = 0,
+        color="black"
+    ) + 
+    geom_point(
+        shape = 22,
+        fill = "#969696",
+        size=6
+    ) + 
+
+    theme_bw() + 
+    theme(
+        legend.position = "none",
+        legend.title = element_blank(),
+        legend.box.background = element_rect(color="gray", linewidth = 1),
+        legend.text = element_text(size = 12),
+        legend.key = element_blank(),
+        legend.key.width = unit(1, "cm"),
+        axis.line = element_line(colour = "black"),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        title = element_text(size=15),
+        plot.title = element_text(hjust = .5)
+        
+    ) + 
+    labs(title = "Change in feature means after z-score data rejection",
+         y = "Percent", x = "")
 ```
 
