@@ -8,7 +8,7 @@ format:
         self-contained: true
 engine: knitr
 execute: 
-  cache: true
+  cache: false
   fig-width: 6.4
   fig-height: 4.8
   warning: false
@@ -817,7 +817,6 @@ Yc = Y.copy()
 plt.hist(Y,bins=40)
 plt.show()
 ```
-
 
 ```{python}
 # percent to remove (two-tailed)
