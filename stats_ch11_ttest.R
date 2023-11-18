@@ -272,7 +272,10 @@ data = tibble(
     data_value = tpdf
 )
 
-ggplot(data, aes(x=data_index, y=data_value)) + 
+tidx = np.argmin(np.abs(t-(tval+t[-1])/2))
+tidx = which.min(abs(t - (tval + t[length(t)])/2))
+
+p = ggplot(data, aes(x=data_index, y=data_value)) + 
     geom_line(
         linewidth=1
     ) +
@@ -291,9 +294,45 @@ ggplot(data, aes(x=data_index, y=data_value)) +
         label = bquote(alpha~"/2" == .(alpha_/2)),
         angle = 90
     ) + 
+    annotate(
+        "segment", 
+        x = t[tidx] + 1, 
+        xend = t[tidx],
+        y = pHalf/2,
+        yend = tpdf[tidx-12],
+        colour = "black", 
+        linewidth = 2, 
+        linejoin="mitre",
+        lineend="butt",
+        arrow = arrow(length = unit(.1, "inches"),
+                                    type="closed")
+    ) + 
+    annotate(
+        "text", 
+        x = (t[tidx]+1), y = 1.1*(pHalf/2), 
+        label = bquote(.(sprintf("%.2f", 100*pval))~"%"),
+    ) + 
+    geom_segment(
+        x = tval, xend = tval,
+        y = pHalf, yend = 0,
+        colour = "black", 
+        arrow = arrow(length = unit(.1, "inches")) 
+    ) + 
+    geom_segment(
+        x = tval+1, xend = tval,
+        y = pHalf, yend = pHalf,
+        colour = "black"
+    ) +
+    annotate(
+        "text", size=6,
+        x = 1.22*(t[tidx]), y = pHalf, 
+        label = bquote(t[df]~"="~frac(bar(x)-mu,'s /'~sqrt(n))~"="~.(tval))
+    ) +
+    xlim(-1, t[length(t)]) + 
+    ylim(0, pHalf*2.1) + 
     myTheme + 
     labs(y = bquote(rho ~ "(t/" ~ H[0] ~ ")"), 
          x = "T value")
 
-    
-     
+p 
+ggsave("ttest_tEmpWEq.png", p, width=7, height=5)
