@@ -10,6 +10,8 @@ seaborn = "*"
 scipy = "*"
 matplotlib = "*"
 syncrng = "*"
+jupyter = "*"
+jupyterlab = "*"
 
 [dev-packages]
 

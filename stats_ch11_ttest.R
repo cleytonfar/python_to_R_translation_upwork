@@ -2,7 +2,10 @@ library(ggplot2)
 library(dplyr)
 library(glue)
 library(stringr)
+library(purrr)
 library(patchwork)
+library(extraDistr)
+library(LaplacesDemon)
 set.seed(10)
 
 myTheme = theme(
@@ -11,6 +14,7 @@ myTheme = theme(
         panel.background = element_blank(), 
         axis.line = element_line(colour = "black"),
         axis.title = element_text(size=15),
+        axis.text = element_text(size=15, color="black"),
         title = element_text(size=15),
         legend.title = element_blank(),
         legend.box.background = element_rect(color="gray", linewidth = 1),
@@ -334,5 +338,1422 @@ p = ggplot(data, aes(x=data_index, y=data_value)) +
     labs(y = bquote(rho ~ "(t/" ~ H[0] ~ ")"), 
          x = "T value")
 
-p 
+p
+
 ggsave("ttest_tEmpWEq.png", p, width=7, height=5)
+
+
+# Figure 11.5: Completion of the previous figure to show both tails ----
+
+# plot the t distribution
+p11.5 = ggplot(data, aes(x=data_index, y=data_value)) + 
+    geom_line(
+        linewidth=1
+    )
+
+# plot shaded area and dashed line for the critical t-value on the right side
+p11.5 = p11.5 +
+    geom_ribbon(
+        data = filter(data, data_index >= tval), 
+        aes(ymax = data_value, ymin=0),
+        fill="#969696") + 
+    geom_vline(
+        xintercept = tCrit,
+        linetype = "dashed",
+        color="gray"
+    ) +
+    annotate(
+        "text", 
+        x = tCrit-0.2, y = pHalf*2, 
+        label = bquote(alpha~"/2" == .(alpha_/2)),
+        angle = 90
+    ) +
+    geom_segment(
+        x = tval, xend = tval,
+        y = pHalf, yend = 0,
+        colour = "black", 
+        arrow = arrow(length = unit(.1, "inches")) 
+    ) + 
+    geom_label(
+        aes(x=tval, y = 1.05*pHalf,
+            label="label", 
+            colour="white")
+    ) + 
+    annotate(
+        "label",
+        size=6,
+        x = tval, y = 1.05*pHalf, 
+        label.size=0,
+        label = glue("t={tval}")
+    )
+    
+# # and again for the left side
+p11.5 = 
+    p11.5 + 
+    geom_ribbon(
+        data = filter(data, data_index <= -tval), 
+        aes(ymax = data_value, ymin=0),
+        fill="#969696") + 
+    geom_vline(
+        xintercept = -tCrit,
+        linetype = "dashed",
+        color="gray"
+    ) + 
+    annotate(
+        "text", 
+        x = -tCrit+0.2, y = pHalf*2, 
+        label = bquote(alpha~"/2" == .(alpha_/2)),
+        angle = 90
+    ) + 
+    geom_segment(
+        x = -tval, xend = -tval,
+        y = pHalf, yend = 0,
+        colour = "black", 
+        arrow = arrow(length = unit(.1, "inches")) 
+    ) + 
+    geom_label(
+        aes(x=-tval, y = 1.05*pHalf,
+            label="label", 
+            colour="white")
+    ) + 
+    annotate(
+        "label",
+        size=6,
+        x = -tval, y = 1.05*pHalf, 
+        label.size=0,
+        label = glue("t={tval}")
+    )
+   
+## arrow and formula for the empirical t-value
+# left:
+tidx_left = which.min(abs(t-(-tval+t[1])/2))
+
+p11.5 = p11.5 + 
+    annotate(
+        "segment", 
+        x = t[tidx_left]-.5, 
+        xend = t[tidx_left],
+        y = pHalf/2,
+        yend = tpdf[tidx_left+12],
+        colour = "black", 
+        linewidth = 2, 
+        linejoin="mitre",
+        lineend="butt",
+        arrow = arrow(length = unit(.1, "inches"),
+                                    type="closed")
+    ) + 
+    annotate(
+        "text", 
+        x = (t[tidx_left]-.5), y = 1.1*(pHalf/2), 
+        label = bquote(.(sprintf("%.2f", 100*pval))~"%"),
+    ) 
+
+# right:
+tidx_right = which.min(abs(t-(tval+t[length(t)])/2))
+
+p11.5 = p11.5 + annotate(
+        "segment", 
+        x = t[tidx_right] + 1, 
+        xend = t[tidx_right],
+        y = pHalf/2,
+        yend = tpdf[tidx_right-12],
+        colour = "black", 
+        linewidth = 2, 
+        linejoin="mitre",
+        lineend="butt",
+        arrow = arrow(length = unit(.1, "inches"),
+                                    type="closed")
+    ) + 
+    annotate(
+        "text", 
+        x = (t[tidx_right]+1), y = 1.1*(pHalf/2), 
+        label = bquote(.(sprintf("%.2f", 100*pval))~"%"),
+    )
+
+# final adjustments
+p11.5 = p11.5 + 
+    ylim(0, pHalf*2.1) + 
+    myTheme + 
+    theme(legend.position = "none",
+          axis.ticks.y = element_blank(),
+          axis.text.y = element_blank()) + 
+    labs(y = bquote(rho ~ "(t/" ~ H[0] ~ ")"), 
+         x = "T value")
+
+p11.5
+
+ggsave("ttest_tEmpWEq2.png", p11.5, width=8, height=6)
+
+
+# Figure 11.6: Testing for normality ----
+
+# the data 
+data1 = rnorm(100)
+data2 = exp(rnorm(100))
+
+# omnibus test:
+Otest1 = nortest::pearson.test(data1)
+Otest2 = nortest::pearson.test(data2)
+    
+# Shapiro's test:
+Stest1 = shapiro.test(data1)
+Stest2 = shapiro.test(data2)
+
+# report the results:
+print(glue("Omnibus test in X1 (H0=normal): p={sprintf('%.3f', Otest1$p.value)}"))
+print(glue("Omnibus test in X2 (H0=normal): p={sprintf('%.3f', Otest2$p.value)}"))
+print(glue("Shapiro test in X1 (H0=normal): p={sprintf('%.3f', Stest1$p.value)}"))
+print(glue("Shapiro test in X2 (H0=normal): p={sprintf('%.3f', Stest2$p.value)}"))
+
+# show the histograms
+nbreaks1 = nclass.FD(data1)
+data1_df = hist(data1, breaks = nbreaks1, plot = F)
+data1_df = tibble(
+    data_index = data1_df$mids,
+    data_value = data1_df$counts
+)
+
+nbreaks2 = nclass.FD(data2)
+data2_df = hist(data2, breaks = nbreaks2, plot = F)
+data2_df = tibble(
+    data_index = data2_df$mids,
+    data_value = data2_df$counts
+)
+
+# plotting:
+p11.6 = ggplot() + 
+    geom_line(
+        data=data1_df,
+        aes(x=data_index, y=data_value, 
+            linetype="X1", color="X1"),
+        linewidth=1
+    ) + 
+    geom_line(
+        data=data2_df,
+        aes(x=data_index, y=data_value, 
+            linetype="X2", color="X2"),
+        linewidth=1
+    )
+
+# final adjustments:
+p11.6 = p11.6 +
+    scale_color_manual(
+        values = c("X1" = "black",
+                   "X2" = "gray")
+    ) + 
+    scale_linetype_manual(
+        values = c("X1" = "dashed",
+                   "X2" = "solid")
+    ) + 
+    myTheme + 
+    theme(legend.position = c(.8, .8)) + 
+    labs(color="", linetype="", 
+         y="Count", x="Data value")
+
+p11.6
+
+# saving;
+ggsave("ttest_normTests.png", p11.6, width=4, height=4)
+
+
+# Figure 11.7: Increasing the t-value ----
+x = seq(-4, 4, length=501)
+
+## panel A: probably not significant
+g1_A = tibble(data_index = x,
+            data_value = dnorm(x, -.3, 1))
+g2_A = tibble(data_index = x,
+            data_value = dnorm(x, .3, 1))
+
+p11.7_A = ggplot() + 
+    geom_line(
+        data=g1_A, 
+        aes(x=data_index, y=data_value,
+            linetype="g1", color="g1"),
+        linewidth=1
+    ) + 
+    geom_line(
+        data=g2_A, 
+        aes(x=data_index, y=data_value,
+            linetype="g2", color="g2"),
+        linewidth=1
+    ) +
+    scale_color_manual(
+        values = c("g1" = "black",
+                   "g2" = "gray")
+    ) + 
+    scale_linetype_manual(
+        values = c("g1" = "solid",
+                   "g2" = "dashed")
+    ) + 
+    myTheme + 
+    theme(
+        legend.position = "none",
+        axis.ticks = element_blank(),
+        axis.text = element_blank()
+    ) + 
+    labs(title=bquote(bold("A)")~"Non-significant"),
+         x="",y="Probability")
+
+# Panel B: significant by larger mean difference
+g1_B = tibble(data_index=x, data_value=dnorm(x, -1, 1))
+g2_B = tibble(data_index=x, data_value=dnorm(x, 1, 1))
+
+p11.7_B = ggplot() + 
+    geom_line(
+        data=g1_B, 
+        aes(x=data_index, y=data_value,
+            linetype="g1", color="g1"),
+        linewidth=1
+    ) + 
+    geom_line(
+        data=g2_B, 
+        aes(x=data_index, y=data_value,
+            linetype="g2", color="g2"),
+        linewidth=1
+    ) +
+    scale_color_manual(
+        values = c("g1" = "black",
+                   "g2" = "gray")
+    ) + 
+    scale_linetype_manual(
+        values = c("g1" = "solid",
+                   "g2" = "dashed")
+    ) + 
+    myTheme + 
+    theme(
+        legend.position = "none",
+        axis.ticks = element_blank(),
+        axis.text = element_blank()
+    ) + 
+    labs(title=bquote(bold("B)")~"Large mean distance"),
+         x="",y="Probability")
+
+# panel C: significant by reduced variance
+g1_C = tibble(data_index=x, data_value=dnorm(x, -.3, .2))
+g2_C = tibble(data_index=x, data_value=dnorm(x, .3, .2))
+
+p11.7_C = ggplot() + 
+    geom_line(
+        data=g1_C, 
+        aes(x=data_index, y=data_value,
+            linetype="g1", color="g1"),
+        linewidth=1
+    ) + 
+    geom_line(
+        data=g2_C, 
+        aes(x=data_index, y=data_value,
+            linetype="g2", color="g2"),
+        linewidth=1
+    ) +
+    scale_color_manual(
+        values = c("g1" = "black",
+                   "g2" = "gray")
+    ) + 
+    scale_linetype_manual(
+        values = c("g1" = "solid",
+                   "g2" = "dashed")
+    ) + 
+    myTheme + 
+    theme(
+        legend.position = "none",
+        axis.ticks = element_blank(),
+        axis.text = element_blank()
+    ) + 
+    labs(title=bquote(bold("C)")~"Low variance"),
+         x="",y="Probability")
+
+p11.7 = p11.7_A + p11.7_B + p11.7_C + plot_layout(ncol=3)
+p11.7
+
+# saving:
+ggsave("ttest_sigMecs.png", p11.7, width=10, height = 4)
+
+# One-sample T-test ----
+
+# given data
+X = c(80, 85, 90, 70, 75, 72, 88, 77, 82, 65, 79, 81, 74, 86, 68)
+h0 = 75
+
+# descriptives
+meanX = mean(X)
+stdX = sd(X)
+ssize = length(X)
+
+# t-value
+tval = (meanX - h0) / (stdX/sqrt(ssize))
+
+# p-value
+pval = 1 - pt(tval, ssize-1)
+pval = 2*pval
+
+# print everything out!
+sprintf("Sample mean: %.2f", meanX)
+sprintf("Sample std: %.2f", stdX)
+print(glue("Sample size: {ssize}"))
+sprintf("T-value: %.3f", tval)
+sprintf("p-value: %.3f", pval)
+
+
+# Repeat using the stats library:
+ttest = t.test(X, mu=h0)
+
+# the output variable is its own type:
+print(class(ttest))
+
+# let's print the results:
+print("Results from t.test:")
+print(sprintf("t(%d) = %.3f, p<%.3f", ttest$parameter, ttest$statistic, ttest$p.value))
+
+# btw, data are consistent with a normal distribution
+print(sprintf("Shapiro p-value = %.2f", shapiro.test(X)$p.value))
+
+
+# Figure 11.8: Paired-samples t-test ----
+
+# the data
+Xn = c( 60, 52, 90, 20, 33, 95, 18, 47, 78, 65 )
+Xq = c( 65, 60, 84, 23, 37, 95, 17, 53, 88, 66 )
+sampsize = length(Xn)
+
+# their difference
+Delta = Xq-Xn
+
+# Visualize
+data = tibble(data_index=1:sampsize,
+              Xn = Xn,
+              Xq = Xq,
+              Delta = Delta)
+data = pivot_longer(data, cols = c("Xn", "Xq", "Delta"))
+data
+p11.8_A = ggplot(filter(data, name != "Delta"),
+       aes(x = factor(name), y=value, group = data_index)) + 
+    geom_line(
+        color="gray"
+    ) + 
+    geom_point(
+        shape=21,
+        size=5,
+        fill="gray"
+    ) + 
+    ylim(c(0, 100)) + 
+    myTheme + 
+    theme(
+        axis.text = element_text(color="black"),
+        axis.text.x = element_text(vjust=-2, hjust = .5),
+    ) + 
+    labs(title=bquote(bold("A)")~"Raw data"),
+         y="Scores", x = "")
+
+p11.8_B = ggplot(data=filter(data, name == "Delta"),
+       aes(x = factor(name), y = value)) + 
+    geom_hline(yintercept = 0, linetype="dashed") + 
+    geom_point(
+        size=5,
+        shape=21,
+        fill="gray"
+    ) +
+    ylim(c(-50, 50)) + 
+    scale_x_discrete(labels= c(bquote(Delta))) + 
+    myTheme + 
+    theme(
+        axis.text.x = element_text(vjust=-2, hjust = .5),
+    ) + 
+    labs(y = "Difference scores",
+         x = "",
+         title=bquote(bold("B)")~"Differences"))
+
+p11.8 = p11.8_A + p11.8_B
+p11.8
+
+# saving:
+ggsave("ttest_pairedTtest.png", p11.8, width = 8, height = 4)
+
+# test it!
+ttest = t.test(Delta, mu=0)
+
+# print the results:
+print(sprintf("t(%d) = %.3f, p<%.3f", ttest$parameter, ttest$statistic, ttest$p.value))
+
+# btw, data are consistent with a normal distribution
+print(sprintf("Xn Shapiro p-value = %.2f", shapiro.test(Xn)$p.value))
+print(sprintf("Xq Shapiro p-value = %.2f", shapiro.test(Xq)$p.value))
+print(sprintf("Xy Shapiro p-value = %.2f", shapiro.test(Delta)$p.value))
+
+# Figure 11.9: Example of 2-sample ttest ----
+# generate data
+library(emg)
+library(extraDistr)
+
+# Exponentially modified normal:
+x1 = remg(50, lambda = 1/3) # lambda = 1/K
+# Gumbel distribution
+x2 = extraDistr::rgumbel(n = 42)
+
+# panel A:
+data1_A = tibble(
+    data_index = "x1", 
+    data_value = x1
+)
+
+data2_A = tibble(
+    data_index="x2", 
+    data_value=x2
+)
+
+data_A = bind_rows(data1_A, data2_A)
+
+p11.9_A = ggplot(data = data_A,
+       aes(x=factor(data_index), y=data_value, 
+           group=data_index,
+           shape=data_index,
+           fill=data_index)) + 
+    geom_point(
+        size=5,
+        alpha=.8
+    ) +
+    scale_x_discrete(
+        labels= c(bquote(X[1]), bquote(X[2]))
+    ) +
+    scale_fill_manual(
+        values=c("x1" = "gray",
+                 "x2" = "gray"
+                 )
+    ) + 
+    scale_shape_manual(
+        values = c("x1" = 21,
+                   "x2" = 22)
+    ) + 
+    myTheme + 
+    theme(legend.position = "none") + 
+    labs(x="", y="",
+         title=bquote(bold("A)")~"Data"))
+
+
+# panel B:
+nbreaks1_B = nclass.FD(x1)
+data1_B = hist(x1, breaks=nbreaks1_B, plot=F)
+data1_B = tibble(data_index=data1_B$mids,
+               data_value=data1_B$counts,
+               group="x1")
+nbreaks2_B = nclass.FD(x2)
+data2_B = hist(x2, breaks=nbreaks2_B, plot=F)
+data2_B = tibble(data_index=data2_B$mids,
+                 data_value=data2_B$counts,
+                 group="x2")
+
+data_B = bind_rows(data1_B, data2_B)
+
+p11.9_B = ggplot(
+    data=data_B, 
+    aes(x = data_index, y = data_value, group=group,
+        color=group, shape=group, fill=group, linetype=group)
+    ) + 
+    geom_line(
+        linewidth=1
+    ) + 
+    geom_point(
+        size=5,
+        alpha=.8,
+        stroke=1
+    ) + 
+    scale_fill_manual(
+        values=c("x1" = "gray",
+                 "x2" = "gray"),
+        labels=c("x1" = bquote(X[1]),
+                 "x2" = bquote(X[2]))
+    ) + 
+    scale_linetype_manual(
+        values = c("x1" = "dashed",
+                   "x2" = "solid"),
+        labels=c("x1" = bquote(X[1]),
+                 "x2" = bquote(X[2]))
+    ) + 
+    scale_color_manual(
+        values=c("x1" = "#737373",
+                 "x2" = "#737373"),
+        labels=c("x1" = bquote(X[1]),
+                 "x2" = bquote(X[2]))
+    ) + 
+    scale_shape_manual(
+        values = c("x1" = 21,
+                   "x2" = 22),
+        labels=c("x1" = bquote(X[1]),
+                 "x2" = bquote(X[2]))
+    ) + 
+    myTheme + 
+    theme(legend.position = c(.8, .8)) + 
+    labs(y = "Count", x = "Data value",
+         title = bquote(bold("B)")~"Distributions"))
+
+p11.9 = p11.9_A + p11.9_B
+p11.9
+
+ggsave("ttest_indTtest.png", p11.9, width=10,  height = 3.5)
+
+# doubling rubric
+s1 = sd(x1)
+s2 = sd(x2)
+
+# report
+print(sprintf("Standard deviations are %.2f and %.2f", s1, s2))
+print(sprintf("Ratio of max:min stdevs is %.2f", max(s1, s2)/min(s1, s2)))
+
+# Levene's test
+library(car)
+
+data_levene_ = bind_rows(
+    tibble(group="x1", data=x1),
+    tibble(group="x2", data=x2),
+)
+    
+lres = leveneTest(data~group, data_levene_)
+
+print(sprintf("Levene's test for homogeneity of variance: W=%.2f, p=%.3f",
+              lres$`F value`[1], lres$`Pr(>F)`[1]))
+
+## tests for normal distribution
+
+# omnibus test
+Otest1 = nortest::pearson.test(x1)
+Otest2 = nortest::pearson.test(x2)
+
+print(sprintf("Omnibus test in X1 (H0 = normal): p=%.3f", Otest1$p.value))
+print(sprintf("Omnibus test in X2 (H0 = normal): p=%.3f", Otest2$p.value))
+
+# Shapiro's test
+Stest1 = shapiro.test(x1)
+Stest2 = shapiro.test(x2)
+
+print(sprintf("Shapiro test in X1 (H0 = normal): p=%.3f", Stest1$p.value))
+print(sprintf("Shapiro test in X2 (H0 = normal): p=%.3f", Stest2$p.value))
+
+# now for the t-test
+tres = t.test(x1, x2, var.equal = F)
+print(sprintf("t=%.2f, p=%.3f", tres$statistic, tres$p.value))
+
+# FYI, here's the result assuming equal variance (see also Exercise 9)
+tres = tres = t.test(x1, x2, var.equal = T)
+print(sprintf("t=%.2f, p=%.3f", tres$statistic, tres$p.value))
+
+# Figure 11.10: Wilcoxon signed-rank ----
+
+# the data
+h0 = 1
+x = rnorm(100)^2
+
+# panel A:
+data_A = tibble(
+    data_index = 1:length(x),
+    data_value = x
+)
+
+p11.10_A = ggplot(
+    data=data_A,
+    aes(x = data_index,
+        y = data_value)
+    ) + 
+    geom_point(
+        alpha=.6,
+        size=5,
+        shape=21,
+        fill="gray"
+    ) + 
+    geom_hline(
+        yintercept = h0,
+        linewidth=1,
+        linetype="dashed",
+        color="#737373"
+    ) + 
+    geom_hline(
+        yintercept = median(data_A$data_value),
+        linewidth=1
+    ) + 
+    myTheme + 
+    labs(x = "Data index", y="Data value",
+         title = bquote(bold("A)")~"Data"))
+
+# panel B:
+nbreaks_B = nclass.FD(x)
+data_B = hist(x, breaks=nbreaks_B, plot=F)
+data_B = tibble(
+    data_index = data_B$mids,
+    data_value = data_B$counts
+)
+
+p11.10_B = ggplot(
+    data = data_B, 
+    aes(x = data_index, y = data_value)
+) + 
+    geom_col(
+        aes(fill="Data"),
+        color="black",
+    ) + 
+    geom_vline(
+        aes(color="H0", xintercept=h0, linetype="H0"),
+        linewidth=1,
+        key_glyph = "path"
+    ) + 
+    geom_vline(
+        aes(xintercept = median(data_A$data_value),
+            color="Median", linetype="Median"),
+        linewidth=1,
+        key_glyph = "path"
+    ) + 
+    scale_fill_manual(
+        name = NULL,
+        values = c("Data" = "gray")
+    ) +
+    scale_color_manual(
+        name = NULL,
+        values = c("H0"="#737373",
+                   "Median"='black'),
+    ) + 
+    scale_linetype_manual(
+        name = NULL,
+        values = c("H0" = "dashed",
+                   "Median" = "solid")
+    ) + 
+    myTheme + 
+    theme(
+        legend.position = c(.8, .8),
+        legend.spacing.x = unit(.3, 'cm'),
+        legend.background = element_rect(fill=NA),
+        legend.spacing = unit(-15, "pt")
+    ) + 
+    labs(color="", fill="", 
+         y="Count", x="Data value", linetype="",
+         title=bquote(bold("B)")~"Distribution"))
+
+p11.10 = p11.10_A + p11.10_B
+p11.10
+
+ggsave("ttest_ranktest.png", p11.10, width=7, height=3.35)
+
+# the test!
+wtest = wilcox.test(
+    x - h0, 
+    exact = F, # no exact calculation for the p-value
+    correct = F, # not applying the continuity correction
+    alternative = "two.sided"
+)
+
+# and print the results
+# R does not provide the zstatistic. 
+# displaying the statistics:
+print(sprintf("Wilcoxon test: %.2f, p=%.3f", wtest$statistic, wtest$p.value))
+
+
+# Figure 11.11 ----
+
+# panel A:
+# create and shift data
+dataA = tibble(
+    data_index=1:30,
+    data_value=rnorm(30) - 1,
+)
+
+zA = wilcox.test(
+    dataA$data_value, 
+    exact = F,
+    correct = F,
+    alternative = "two.sided"
+)$statistic    
+
+p11.11_A = ggplot(
+    data=dataA, 
+    aes(x=data_value, y=data_index) 
+    ) + 
+    geom_point(
+       size = 4,
+       shape=21,
+       fill="black"
+    ) +
+    geom_vline(
+        xintercept = 0,
+        linewidth=1,
+        color="gray"
+    ) + 
+    myTheme + 
+    labs(y="Data index", x = "Data values",
+         title= glue("Wilcoxon z={zA}"))
+
+# panel B:
+# create and shift data
+dataB = tibble(
+    data_index=1:30,
+    data_value=rnorm(30) + 1,
+)
+zB = wilcox.test(
+    dataB$data_value,
+    exact = F,
+    correct = F,
+    alternative = "two.sided"
+)$statistic    
+
+p11.11_B = ggplot(
+    data=dataB, 
+    aes(x=data_value, y=data_index) 
+    ) + 
+    geom_point(
+       size = 4,
+       shape=21,
+       fill="black"
+    ) +
+    geom_vline(
+        xintercept = 0,
+        linewidth=1,
+        color="gray"
+    ) + 
+    myTheme + 
+    labs(y="Data index", x = "Data values",
+         title= glue("Wilcoxon z={zB}"))
+
+p11.11_B
+
+# 
+p11.11 = p11.11_A / p11.11_B
+p11.11
+
+# saving:
+ggsave("ttest_wilcoxonSign.png", p11.11, width=4, height=6)
+
+# Mann-Whitney U test ----
+
+# same data as we used fot the independent-samples t test
+
+# Exponentially modified normal:
+x1 = remg(50, lambda = 1/3) # lambda = 1/K
+# Gumbel distribution
+x2 = extraDistr::rgumbel(n = 42)
+
+# MW-U test
+mwu = wilcox.test(x1, x2)
+print(sprintf("U=%.0f, p=%.3f", mwu$statistic, mwu$p.value))
+
+# parametric t-tet (dives the same statistical conclusion as the MWU)
+tres = t.test(x1, x2, var.equal = F)
+print(sprintf("t=%.0f, p=%.3f", tres$statistic, tres$p.value))
+
+
+# Exercise 1 ----
+
+# parameters 
+N = 50
+h0 = -pi/2
+
+# create the dataset:
+X = LaplacesDemon::ralaplace(
+    n = N, 
+    scale = sqrt(2), 
+    kappa = 2
+)
+dataMean = mean(X)
+
+data_ = tibble(
+    data_index = 1:N,
+    data_value = X
+)
+
+pE1_A = ggplot(data = data_, aes(x=data_index,y=data_value)) + 
+    geom_point(
+        shape=22,
+        size=3,
+        fill = "gray",
+        alpha=.8
+    ) + 
+    geom_hline(
+        yintercept = h0,
+        linetype="dashed",
+        color="black",
+        linewidth=1
+    ) + 
+    geom_hline(
+        yintercept = dataMean,
+        linetype="dotted",
+        color="black",
+        linewidth=1
+    ) + 
+    myTheme + 
+    labs(x = "Data index", y = "Data Value",
+         title=bquote(bold("A)")~"Raw Data"))
+
+# panel B:
+data_B = hist(X, breaks = nclass.FD(X), plot = F)
+data_B = tibble(
+    data_index = data_B$mids,
+    data_value = data_B$counts
+)
+
+pE1_B = ggplot(
+    data = data_B, 
+    aes(x = data_index, y = data_value)
+) + 
+    geom_col(
+        fill="gray",
+        color="black",
+    ) + 
+    geom_vline(
+        aes(color="H0 value", xintercept=h0, linetype="H0 value"),
+        linewidth=1,
+        key_glyph = "path"
+    ) + 
+    geom_vline(
+        aes(xintercept = dataMean,
+            color="Emp. mean", linetype="Emp. mean"),
+        linewidth=1,
+        key_glyph = "path"
+    ) +
+    scale_color_manual(
+        name = NULL,
+        values = c("H0 value"="#737373",
+                   "Emp. mean"='black'),
+    ) + 
+    scale_linetype_manual(
+        name = NULL,
+        values = c("H0 value" = "dashed",
+                   "Emp. mean" = "dotted")
+    ) + 
+    myTheme + 
+    theme(
+        legend.position = "right",
+        legend.spacing.x = unit(.3, 'cm'),
+        legend.background = element_rect(fill=NA),
+        legend.spacing = unit(-15, "pt"),
+    ) + 
+    labs(color="", fill="", 
+         y="Count", x="Data value", linetype="",
+         title=bquote(bold("B)")~"Histogram and means"))
+
+# final plot
+pE1 = pE1_A + pE1_B
+pE1
+ggsave("ttest_ex1.png", pE1, width=15, height = 5)
+
+
+# now for the test
+
+## manual calculation
+t_num = dataMean - h0
+t_den = sd(X) / sqrt(N)
+
+tval = t_num / t_den
+pval = pt(abs(tval), df=N-1, lower.tail = F)
+pval = 2*pval # double it for 2-tailed
+pval
+
+# using stats
+r = t.test(X, mu=h0)
+t = r$statistic
+df = r$parameter
+p = r$p.value
+
+# print both results:
+sprintf("manuel ttest: t(%d) = %.3f, p=%.3f", N-1, tval, pval)
+sprintf("manuel ttest: t(%d) = %.3f, p=%.3f", N-1, t, p)
+
+
+# Exercise 2 ----
+
+# how often do we get subthreshold results?
+nExps = 500
+issig = vector("logical", nExps)
+means = vector("numeric", nExps)
+stds = vector("numeric", nExps)
+
+# run the experiment
+#   (Note: For a small extra challenge, you could re-implement this
+#    without a for-loop using matrix input, after completing the next
+#    exercise.)
+for( i in seq(1, nExps, by=1) ){
+    # generate data and store the mean/std
+    X = LaplacesDemon::ralaplace(
+        n = N, 
+        scale = sqrt(2), 
+        kappa = 2
+    )
+    means[i] = mean(X)
+    stds[i] = sd(X)
+    # run the ttest and store if "significant"
+    r = t.test(X, mu = h0, alternative = "two.sided")
+    issig[i] = r$p.value < .05
+}
+
+print(glue("p<.05 in {sum(issig)}/{nExps} times."))
+
+# show the results
+pE2_A = ggplot() + 
+    geom_point(
+        data = tibble(data_index=rnorm(sum(issig))/40,
+                     data_value=means[issig]), 
+        aes(x=data_index, y=data_value),
+        shape=21,
+        size=3,
+        fill="gray",
+        alpha=.6
+    ) + 
+    geom_point(
+        data = tibble(data_index=rnorm(sum(!issig))/40 + 1,
+                      data_value=means[!issig]), 
+        aes(x=data_index, y=data_value),
+        shape=22,
+        size=3,
+        fill="gray",
+        alpha=.6
+    )  +
+    scale_x_continuous(
+        breaks = c(0, 1),
+        labels= c("p<.05", "p>.05")
+    ) +
+    myTheme + 
+    labs(y="", x = "",
+         title=bquote(bold("A)")~"Sample Means")) 
+
+pE2_B = ggplot() + 
+    geom_point(
+        data = tibble(data_index=rnorm(sum(issig))/40,
+                     data_value=stds[issig]), 
+        aes(x=data_index, y=data_value),
+        shape=21,
+        size=3,
+        fill="gray",
+        alpha=.6
+    ) + 
+    geom_point(
+        data = tibble(data_index=rnorm(sum(!issig))/40 + 1,
+                      data_value=stds[!issig]), 
+        aes(x=data_index, y=data_value),
+        shape=22,
+        size=3,
+        fill="gray",
+        alpha=.6
+    )  +
+    scale_x_continuous(
+        breaks = c(0, 1),
+        labels= c("p<.05", "p>.05")
+    ) +
+    myTheme + 
+    labs(y="", x = "",
+         title=bquote(bold("A)")~"Sample stds.")) 
+
+pE2 = pE2_A + pE2_B    
+pE2
+
+# saving:
+ggsave("ttest_ex2.png", pE2, width=7, height=3)
+
+# Exercise 3 ----
+NperSample = 40
+MDatasets = 25
+
+# data
+X = matrix(rnorm(NperSample*MDatasets, mean = 1, sd = 1),
+           nrow=NperSample, ncol = MDatasets)
+
+print("Data size should be sample-size X dataset:")
+print(dim(X))
+
+# t.test with matrix input:
+ttest_matrix = apply(X, 2, t.test, mu=0)
+
+# t.test in for-loop over each column (each dataset);
+ttest_4loop = vector("list", MDatasets)
+for (i in seq(1, MDatasets)) {
+    ttest_4loop[[i]] = t.test(X[, i], mu=0)
+}
+
+# print the results:
+print("Matrix | Vector")
+print("------ | ------")
+for (i in seq(1,MDatasets)){
+    print(sprintf("%.4f | %.4f", ttest_matrix[[i]]$statistic, ttest_4loop[[i]]$statistic))
+}
+
+# Exercise 4 ----
+
+# data parameters:
+N = 40
+k = 300
+
+stds = seq(.1, 3, length=k)
+
+# initiate the t/p vectors:
+t = vector("numeric", k)
+p = vector("numeric", k)
+s = vector("numeric", k)
+
+for (i in seq(1, k)) {
+    X = rnorm(n = N, mean = 0, sd = stds[[i]])
+    X = X - mean(X) + .5 # force mean = .5
+    ttest = t.test(X, mu = 0)
+    t[[i]] = ttest$statistic
+    p[[i]] = ttest$p.value
+    # get the sample std (used in exercise 5)
+    s[[i]] = sd(X)
+}
+
+# and now plotting:
+pE4_A = ggplot(
+    data = tibble(data_index = stds,
+                  data_value = t),
+    aes(x = data_index, y = data_value)
+    ) + 
+    geom_point(
+        shape = 22,
+        color="black",
+        size=4
+    ) + 
+    myTheme + 
+    labs(y = "t-value",
+         x = "Standard deviation",
+         title=bquote(bold("A)")~"T-values"))
+
+pE4_B = 
+    ggplot(
+        data = tibble(data_index = stds,
+                      data_value = p),
+        aes(x = data_index,
+            y = data_value)
+    ) + 
+    geom_point(
+        shape=22,
+        color="black",
+        size=3
+    ) + 
+    myTheme + 
+    labs(y = "p-value",
+         x = "Standard deviation",
+         title=bquote(bold("B)")~"P-values"))
+
+# panel C:
+pE4_C = ggplot(
+    data = tibble(data_index=t,
+                  data_value=p),
+    aes(x=data_index, y=data_value)
+) + 
+    geom_point(
+        shape=22,
+        color="black",
+        size=3
+    ) + 
+    myTheme + 
+    labs(y="p-value", x="T-value",
+         title=bquote(bold("C)")~"p by t"))
+
+# final plot
+pE4 = pE4_A + pE4_B + pE4_C 
+pE4
+
+# save
+ggsave("ttest_ex4.png", pE4, width=10, height = 3)
+
+# Exercise 5 ----
+
+# No, it doesn't really matter, because even with N=40, the sample
+# standard deviation is a fairly accurate estimate of the population 
+# standard deviation, certainly for this range of standard deviation
+# values.
+
+# You can recreate the figure by replacing variable 'stds' with 's' 
+# in the code above, and by demonstrating the strong correlation 
+# between sample and theoretical standard deviation.
+
+# correlation coefficient (values close to 1 indicate a very strong 
+# relationship)
+r = cor.test(stds,s)
+r$estimate
+
+# plot
+p5 = ggplot(
+    data = tibble(data_index = stds,
+                  data_value = s),
+    aes(x = data_index, y = data_value)
+    ) + 
+    geom_point(
+        shape = 21,
+        fill = "black",
+        size = 3
+    ) + 
+    myTheme + 
+    theme(plot.title = element_text(hjust = .5)) + 
+    labs(y = "Theoretical population standard deviations",
+         x = "Empirical sample standard deviations",
+         title=sprintf("Correlation: r=%.3f", r$estimate))
+
+# final plot
+p5
+
+# saving;
+ggsave("ttest_ex5.png", p5, width=10, height=3)
+
+
+# Exercise 6 ----
+nExperiments = 250
+meanoffsets = seq(0, .3, length = 51)
+samplesizes = seq(10, 811, by = 50)
+
+# initialize
+propSig = matrix(
+    data = 0, 
+    nrow = length(samplesizes), 
+    ncol = length(meanoffsets)
+)
+
+# loop over sample sizes
+for (i in seq_along(samplesizes)) {
+    # i = 1
+    ssize = samplesizes[[i]]
+    for (j in seq_along(meanoffsets)) { 
+        # j=1
+        effect = meanoffsets[[j]]
+        # Generate the data:
+        X = matrix(
+            data = rnorm(n = ssize*nExperiments, mean = effect, sd = 1.5),
+            nrow = ssize, 
+            ncol=nExperiments
+        )
+        # run the t-test and store the results
+        T_ = apply(X, 2, t.test, mu=0)
+        propSig[i,j] = 100*mean(map_dbl(T_, "p.value") < .05)
+    }
+    
+}
+
+propSig
+
+
+# Create a data frame with the values
+data_ = as_tibble(propSig)
+colnames(data_) = meanoffsets
+data_[["SampleSizes"]] = samplesizes
+data_ = pivot_longer(data_, -"SampleSizes", names_to = "MeanOffSets")
+data_
+
+# Create the ggalot
+pE6 = ggplot(data_, aes(x= MeanOffSets, y=SampleSizes, fill=value)) + 
+    #    geom_raster() + 
+  geom_tile() +
+  scale_fill_gradient(
+      low = "black", 
+      high = "white", 
+      limits = c(0, 25)
+    ) +
+    myTheme + 
+    scale_x_discrete(
+        breaks = seq(min(meanoffsets), max(meanoffsets), by=.05)
+    ) + 
+    labs(x = "Mean offset", y = "Sample size",
+         fill = "Percent tests with p<.05")
+
+# save
+ggsave("ttest_ex6.png", pE6, width=8, height=4)
+
+
+# Exercise 7 ----
+Xn = c(60, 52, 90, 20, 33, 95, 18, 47, 78, 65)
+Xq = c(65, 60, 84, 23, 37, 95, 17, 53, 88, 66)
+sampsize = length(Xn)
+
+# simple subtraction (Y1 in the text)
+Ysub = Xq-Xn
+
+# zscore subtraction (Y2 in the text)
+Ysbz = scale(Xq) - scale(Xn)
+Ysbz = as.vector(Ysbz)
+
+# percent change (Y3 in the text)
+Ypct = 100*(Xq-Xn) / Xn
+
+# normalized ratio (Y4 in the text)
+Ynrt = (Xq-Xn) / (Xq+Xn)
+
+# plots
+pE6_1 = ggplot(
+    data = tibble(x = Ysub, y = Ysbz),
+    aes(x = x, y = y)
+    ) + 
+    geom_point(
+        size=5,
+        shape=21,
+        fill="gray"
+    ) + 
+    myTheme + 
+    labs(x="Subtraction", y="Z-scored")
+
+pE6_2 = ggplot(data = tibble(x = Ysub, y = Ypct),
+               aes(x=x,y=y)) + 
+    geom_point(
+        size=5,
+        shape=21,
+        fill="gray"
+    ) + 
+    myTheme + 
+    labs(x="Subtraction", y="Percent change")
+
+
+pE6_3 = ggplot(data = tibble(x = Ysub, y = Ynrt),
+               aes(x=x,y=y)) + 
+    geom_point(
+        size=5,
+        shape=21,
+        fill="gray"
+    ) + 
+    myTheme + 
+    labs(x="Subtraction", y="Norm. ration")
+
+pE6_4 = ggplot(data = tibble(x = Ysbz, y = Ypct),
+               aes(x=x,y=y)) + 
+    geom_point(
+        size=5,
+        shape=21,
+        fill="gray"
+    ) + 
+    myTheme + 
+    labs(x="Z-scored", y="Percent change")
+
+pE6_5 = ggplot(data = tibble(x = Ysbz, y = Ynrt),
+               aes(x=x,y=y)) + 
+    geom_point(
+        size=5,
+        shape=21,
+        fill="gray"
+    ) + 
+    myTheme + 
+    labs(x="Z-scored", y="Norm. ratio")
+
+pE6_6 = ggplot(data = tibble(x = Ypct, y = Ynrt),
+               aes(x=x,y=y)) + 
+    geom_point(
+        size=5
+        ,
+        shape=21,
+        fill="gray"
+    ) + 
+    myTheme + 
+    labs(x="Percent change", y="Norm. ratio")
+
+# final plot:
+pE6 = pE6_1 + pE6_2 + pE6_3 + pE6_4 + pE6_5 + pE6_6 + plot_layout(ncol=3)
+pE6
+
+# saving:
+ggsave("ttest_ex7.png", pE6, width=10, height=6)
+
+
+# Exercise 8 ----
+
+# parameters
+mu1 = 1.2 # population mean in dataset 1
+mu2 = 1 # population mean in dataset 2
+
+# sample sizes
+ns = seq(10, 201, by=10)
+
+pE8_A = ggplot()
+pE8_B = ggplot()
+# start the experiment
+for (i in seq_along(ns)){
+    # i=1
+    N = ns[[i]]
+    data1 = matrix(
+        rnorm(N*100, mean = mu1, sd = .5),
+        nrow=N, ncol=100
+    )
+    
+    data2 = matrix(
+        rnorm(N*100, mean = mu2, sd = .5),
+        nrow=N, ncol=100
+    )
+    
+    # run the ttest:
+    ttest = map2(as_tibble(data1), as_tibble(data2), t.test, var.equal=T, paired=F)
+    t = map_dbl(ttest, "statistic") %>% unname
+    p = map_dbl(ttest, "p.value") %>% unname
+    
+    # plot the t-value, colored by significance
+    pE8_A = pE8_A + 
+        geom_point(
+            data = tibble(x = rep(N, length=sum(p > .05)),
+                          y = t[p > .05]),
+            aes(x = x, y = y),
+            shape = 22,
+            size=5,
+            alpha=.3,
+            fill="gray"
+        ) + 
+        geom_point(
+            data = tibble(x = rep(N, length=sum(p < .05)),
+                          y = t[p < .05]),
+            aes(x = x, y = y),
+            shape = 21,
+            size=5,
+            alpha=.3,
+            fill="red"
+        ) + 
+        myTheme 
+    
+    # # plot the p-values, colored by significance
+    pE8_B = pE8_B + 
+        geom_point(
+            data = tibble(x = rep(N, length=sum(p > .05)),
+                          y = p[p > .05]),
+            aes(x = x, y = y),
+            shape = 22,
+            size=5,
+            alpha=.3,
+            fill="gray"
+        ) + 
+        geom_point(
+            data = tibble(x = rep(N, length=sum(p < .05)),
+                          y = p[p < .05]),
+            aes(x = x, y = y),
+            shape = 21,
+            size=5,
+            alpha=.3,
+            fill="red"
+        ) + 
+        myTheme 
+    
+}
+
+# final adjustments:
+pE8_A = pE8_A + 
+    scale_x_continuous(breaks = ns) + 
+    labs(title=bquote(bold("A)")~"T-values"),
+         x = "Sample size (equal groups)", y = "T-test value")
+
+pE8_B = pE8_B + 
+    scale_x_continuous(breaks = ns) + 
+    scale_y_log10() + 
+    geom_hline(
+        yintercept = 0.05,
+        linetype="dashed",
+        color="red",
+        linewidth=1
+        ) + 
+    labs(title=bquote(bold("B)")~"P-values"),
+         x = "Sample size (equal groups)", y = "P value")
+
+# final plot:
+pE8 = pE8_A + pE8_B + plot_layout(ncol=1)
+pE8
+
+# saving:
+ggsave("ttest_ex8.png", pE8, width = 10, height = 6)
+
+# compute critical t-values for the degrees of freedom
+tCrit = map_dbl(2*ns-2, ~qt(.05/2, ., lower.tail = F))
+
+# and visualize
+ggplot(data = tibble(x = ns, y = tCrit),
+       aes(x = x, y = y))+
+    geom_point(
+        shape=21,
+        size=5,
+        fill="gray"
+    ) + 
+    ylim(c(1.8, 2.2)) + 
+    myTheme + 
+    labs(x = 'Degrees of freedom',
+         y = 'Critical t-values (2-tailed)')
+
