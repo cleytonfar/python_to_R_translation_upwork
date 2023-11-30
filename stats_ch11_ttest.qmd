@@ -2881,3 +2881,246 @@ ggplot(data = tibble(x = ns, y = tCrit),
 
 ```
 
+# Exercise 9 
+
+## Python version 
+
+```{python}
+#| label: "Exercise 9 (python-version)"
+# range of standard deviations
+stdevs = np.linspace(.01,15,41)
+
+# initialize results matrix
+results = np.zeros((3,len(stdevs)))
+tCrit = np.zeros(len(stdevs))
+
+# start the experiment!
+for si,std in enumerate(stdevs):
+
+  # create two groups of data
+  X1 = np.random.normal(loc=1,scale=1,size=50)
+  X2 = np.random.normal(loc=1.1,scale=std,size=40)
+
+  # levene's test
+  results[0,si] = np.log( stats.levene(X1,X2).pvalue )
+
+  # difference of t-values
+  same_var = stats.ttest_ind(X1,X2,equal_var=True)  # equal variance
+  diff_var = stats.ttest_ind(X1,X2,equal_var=False) # unequal variance
+  results[1,si] = same_var.statistic # equal variance
+  results[2,si] = diff_var.statistic # unequal variance
+
+
+  # compute df for tCrit
+  s1,s2 = np.var(X1,ddof=1),np.var(X2,ddof=1)
+  n1,n2 = len(X1),len(X2)
+  df_num = (s1/n1 + s2/n2)**2
+  df_den = s1**2/(n1**2*(n1-1)) + s2**2/(n2**2*(n2-1))
+
+  tCrit[si] = stats.t.isf(.05/2,df_num/df_den)
+
+
+
+# plot
+_,axs = plt.subplots(1,2,figsize=(10,4))
+
+# levene's test results
+axs[0].plot(stdevs,results[0,:],'ks',markersize=10,markerfacecolor='gray')
+axs[0].axhline(np.log(.05),color=(.6,.6,.6),linestyle='--',zorder=-1)
+axs[0].text(np.max(stdevs),np.log(.1),'p=.05',ha='right',color=(.6,.6,.6))
+axs[0].set(xlabel=r'Standard deviation of $X_2$',ylabel='log(p)',title=r"$\bf{A}$)  Levene's P-values")
+
+# t-tests
+axs[1].plot(stdevs,results[1,:],'ks',markersize=8,markerfacecolor=(.4,.4,.4),label='Equal var.')
+axs[1].plot(stdevs,results[2,:],'ko',markersize=8,markerfacecolor=(.8,.8,.8),label='Unequal var.')
+axs[1].plot(stdevs,tCrit,'--',color=(.6,.6,.6),zorder=-1,label='p=.05')
+axs[1].plot(stdevs,-tCrit,'--',color=(.6,.6,.6),zorder=-1)
+axs[1].set(xlabel=r'Standard deviation of $X_2$',ylabel='T-value',title=r"$\bf{B}$)  T-test t-values")
+axs[1].legend(fontsize=10,bbox_to_anchor=[.8,1])
+
+
+plt.tight_layout()
+plt.savefig('ttest_ex9.png')
+plt.show()
+
+# Not in the instructions, but I think it's also interesting to
+#  plot the ratio of t-values as a function of standard deviation
+# values >1 indicate a larger t-value for equal compared to unequal variance formula
+plt.plot(stdevs,results[1,:]/results[2,:],'ko',markersize=8)
+plt.axhline(1,linestyle='--',color='gray',zorder=-1)
+plt.ylim([.5,1.5])
+plt.ylabel('Equal to Unequal variance t ratio')
+plt.show()
+```
+
+
+## R version:
+
+```{r}
+#| label: "Exercise 9 (r-version)"
+#| fig-width: 10
+#| fig-height: 4
+
+# Exercise 9 ----
+
+# range of standard deviations
+stdevs = seq(.01, 15, length=41)
+
+# initialize results matrix
+results = matrix(0, nrow = 3, ncol=length(stdevs))
+tCrit = rep(0, length(stdevs))
+
+# start the experiment!
+for (i in seq_along(stdevs) ) {
+    # i=1
+    std = stdevs[[i]]
+    
+    # create two groups of data
+    X1 = rnorm(mean=1, sd=1, n=50)
+    X2 = rnorm(mean=1.1, sd=std, n=40)
+    
+    # levene's test
+    levene_test = car::leveneTest(
+        x ~ group,
+        bind_rows(tibble(x= X1, group = "sample 1"),
+                  tibble(x= X2, group = "sample 2"))
+    )
+    results[1, i] = log(levene_test$`Pr(>F)`[[1]])
+    
+    # difference of t-values
+    same_var = t.test(X1, X2, var.equal = T) # equal variance
+    diff_var = t.test(X1, X2, var.equal = F) # unequal variance
+    results[2, i] = same_var$statistic # equal variance
+    results[3, i] = diff_var$statistic # unequal variance
+    
+    # compute df for tCrit
+    s1 = var(X1)
+    s2 = var(X2)
+    n1 = length(X1)
+    n2 = length(X2)
+    df_num = (s1/n1 + s2/n2)^2
+    df_den = s1^2/(n1^2*(n1-1)) + s2^2/(n2^2*(n2-1))
+    tCrit[[i]] = qt(.05/2, df =df_num/df_den, lower.tail = F)
+    
+}
+
+# plot
+
+# levene's test results
+pE9_A = ggplot(data = tibble(x = stdevs,
+                     y = results[1,]),
+       aes(x=x, y=y)) + 
+    geom_point(
+        shape=22,
+        fill="#525252",
+        size=5
+    ) + 
+    geom_hline(
+        yintercept = log(.05),
+        linetype="dashed",
+        color="gray",
+        linewidth=1
+    ) + 
+    annotate(
+        "text",
+        x = max(stdevs),
+        y = log(.1),
+        label = "p = .05",
+        color="gray",
+        size=4
+    ) + 
+    myTheme + 
+    labs(title=bquote(bold("A)")~"Levene's P-values"),
+         x = bquote("Standard deviation of"~X[2]),
+         y="log(p)")
+
+# t-tests
+pE9_B = ggplot( ) + 
+    geom_point(
+        data = tibble(x = stdevs,
+                      y = results[2, ]),
+        aes(x=x, y = y, 
+            shape = "Equal var.", 
+            fill = "Equal var."),
+        size=5
+    ) + 
+    geom_point(
+        data = tibble(x = stdevs,
+                      y = results[3, ]),
+        aes(x=x, y = y, 
+            shape = "Unequal var.", 
+            fill = "Unequal var."),
+        size=5
+    ) + 
+    geom_line(
+        data = tibble(x = stdevs,
+                      y = tCrit),
+        aes(x = x, y = y, 
+            color = "p == .05"),
+        linetype="dashed",
+        linewidth=1
+    ) + 
+    geom_line(
+        data = tibble(x = stdevs,
+                      y = -tCrit),
+        aes(x = x, y = y),
+        linetype="dashed",
+        color="gray",
+        linewidth=1
+    ) + 
+    scale_fill_manual(
+        values = c("Equal var." = "#525252",
+                   "Unequal var." = "#bdbdbd")
+    ) + 
+    scale_shape_manual(
+        values = c("Equal var." = 22,
+                   "Unequal var." = 21)
+    ) + 
+    scale_color_manual(
+        values=c("p == .05" = "gray")
+    ) + 
+    myTheme + 
+    theme(
+        legend.position = "right",
+        legend.spacing.x = unit(.3, 'cm'),
+        legend.background = element_rect(fill=NA),
+        legend.spacing = unit(-15, "pt")
+    ) + 
+    labs(fill="", shape="",
+         title=bquote(bold("B)")~"T-test values"),
+         x = bquote("Standard deviation of"~X[2]),
+         y="T-value")
+
+# final plot
+pE9 = pE9_A + pE9_B
+pE9
+
+# saving:
+ggsave("ttest_ex9.png", pE9, width=12, height=5)
+```
+
+
+```{r}
+# Not in the instructions, but I think it's also interesting to
+#  plot the ratio of t-values as a function of standard deviation
+# values >1 indicate a larger t-value for equal compared to unequal variance formula
+ggplot(data = tibble(x=stdevs,
+                     y = results[2,]/results[3,]),
+       aes(x = x, y = y))+
+    geom_point(
+        shape=21,
+        fill="black",
+        size=5
+    ) + 
+    geom_hline(
+        yintercept = 1,
+        linetype="dashed",
+        color="gray",
+        linewidth=1
+    ) + 
+    ylim(c(.5, 1.5)) + 
+    myTheme + 
+    labs(y="Equal to Unequal variance t ratio",
+         x="")
+```
+

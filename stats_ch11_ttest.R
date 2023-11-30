@@ -1757,3 +1757,162 @@ ggplot(data = tibble(x = ns, y = tCrit),
     labs(x = 'Degrees of freedom',
          y = 'Critical t-values (2-tailed)')
 
+
+# Exercise 9 ----
+
+# range of standard deviations
+stdevs = seq(.01, 15, length=41)
+
+# initialize results matrix
+results = matrix(0, nrow = 3, ncol=length(stddevs))
+tCrit = rep(0, length(stddevs))
+
+# start the experiment!
+for (i in seq_along(stdevs) ) {
+    # i=1
+    std = stdevs[[i]]
+    
+    # create two groups of data
+    X1 = rnorm(mean=1, sd=1, n=50)
+    X2 = rnorm(mean=1.1, sd=std, n=40)
+    
+    # levene's test
+    levene_test = car::leveneTest(
+        x ~ group,
+        bind_rows(tibble(x= X1, group = "sample 1"),
+                  tibble(x= X2, group = "sample 2"))
+    )
+    results[1, i] = log(levene_test$`Pr(>F)`[[1]])
+    
+    # difference of t-values
+    same_var = t.test(X1, X2, var.equal = T) # equal variance
+    diff_var = t.test(X1, X2, var.equal = F) # unequal variance
+    results[2, i] = same_var$statistic # equal variance
+    results[3, i] = diff_var$statistic # unequal variance
+    
+    # compute df for tCrit
+    s1 = var(X1)
+    s2 = var(X2)
+    n1 = length(X1)
+    n2 = length(X2)
+    df_num = (s1/n1 + s2/n2)^2
+    df_den = s1^2/(n1^2*(n1-1)) + s2^2/(n2^2*(n2-1))
+    tCrit[[i]] = qt(.05/2, df =df_num/df_den, lower.tail = F)
+    
+}
+
+# plot
+
+# levene's test results
+pE9_A = ggplot(data = tibble(x = stddevs,
+                     y = results[1,]),
+       aes(x=x, y=y)) + 
+    geom_point(
+        shape=22,
+        fill="#525252",
+        size=5
+    ) + 
+    geom_hline(
+        yintercept = log(.05),
+        linetype="dashed",
+        color="gray",
+        linewidth=1
+    ) + 
+    annotate(
+        "text",
+        x = max(stdevs),
+        y = log(.1),
+        label = "p = .05",
+        color="gray",
+        size=4
+    ) + 
+    myTheme + 
+    labs(title=bquote(bold("A)")~"Levene's P-values"),
+         x = bquote("Standard deviation of"~X[2]),
+         y="log(p)")
+
+# t-tests
+pE9_B = ggplot( ) + 
+    geom_point(
+        data = tibble(x = stdevs,
+                      y = results[2, ]),
+        aes(x=x, y = y, 
+            shape = "Equal var.", 
+            fill = "Equal var."),
+        size=5
+    ) + 
+    geom_point(
+        data = tibble(x = stdevs,
+                      y = results[3, ]),
+        aes(x=x, y = y, 
+            shape = "Unequal var.", 
+            fill = "Unequal var."),
+        size=5
+    ) + 
+    geom_line(
+        data = tibble(x = stdevs,
+                      y = tCrit),
+        aes(x = x, y = y, 
+            color = "p == .05"),
+        linetype="dashed",
+        linewidth=1
+    ) + 
+    geom_line(
+        data = tibble(x = stdevs,
+                      y = -tCrit),
+        aes(x = x, y = y),
+        linetype="dashed",
+        color="gray",
+        linewidth=1
+    ) + 
+    scale_fill_manual(
+        values = c("Equal var." = "#525252",
+                   "Unequal var." = "#bdbdbd")
+    ) + 
+    scale_shape_manual(
+        values = c("Equal var." = 22,
+                   "Unequal var." = 21)
+    ) + 
+    scale_color_manual(
+        values=c("p == .05" = "gray")
+    ) + 
+    myTheme + 
+    theme(
+        legend.position = "right",
+        legend.spacing.x = unit(.3, 'cm'),
+        legend.background = element_rect(fill=NA),
+        legend.spacing = unit(-15, "pt")
+    ) + 
+    labs(fill="", shape="",
+         title=bquote(bold("B)")~"T-test values"),
+         x = bquote("Standard deviation of"~X[2]),
+         y="T-value")
+
+# final plot
+pE9 = pE9_A + pE9_B
+pE9
+
+# saving:
+ggsave("ttest_ex9.png", pE9, width=12, height=5)
+
+# Not in the instructions, but I think it's also interesting to
+#  plot the ratio of t-values as a function of standard deviation
+# values >1 indicate a larger t-value for equal compared to unequal variance formula
+ggplot(data = tibble(x=stdevs,
+                     y = results[2,]/results[3,]),
+       aes(x = x, y = y))+
+    geom_point(
+        shape=21,
+        fill="black",
+        size=5
+    ) + 
+    geom_hline(
+        yintercept = 1,
+        linetype="dashed",
+        color="gray",
+        linewidth=1
+    ) + 
+    ylim(c(.5, 1.5)) + 
+    myTheme + 
+    labs(y="Equal to Unequal variance t ratio",
+         x="")
