@@ -3124,3 +3124,293 @@ ggplot(data = tibble(x=stdevs,
          x="")
 ```
 
+# Exercise 10 
+
+## Python version
+
+```{python}
+#| label: "Exercise 10 (python-version)"
+
+# generate the data
+sigmas = np.linspace(.1,1.2,20)
+
+# null hypothesis value
+h0 = .5
+
+# initialize the results matrices
+tvals = np.zeros((2,len(sigmas)))
+cents = np.zeros((2,len(sigmas)))
+
+_,axs = plt.subplots(1,3,figsize=(11,3))
+
+
+
+# compute and store all moments in a matrix
+for i,s in enumerate(sigmas):
+
+  # generate mean-centered data
+  X = np.exp(np.random.randn(100)*s)
+  X -= np.mean(X)
+
+  # compute and store the descriptives
+  cents[0,i] = np.mean(X) - h0
+  cents[1,i] = np.median(X) - h0
+
+  # draw the histogram
+  if i%3==0:
+    mc = len(sigmas)+2
+    y,x = np.histogram(X,bins='fd')
+    axs[0].plot((x[:-1]+x[1:])/2,y,color=(i/mc,i/mc,i/mc),linewidth=2)
+    axs[0].axvline(np.median(X),color=(i/mc,i/mc,i/mc),linestyle='--',linewidth=.8)
+
+  # parametric t-test
+  tvals[0,i] = stats.ttest_1samp(X,h0).statistic
+
+  # Wilcoxon test
+  tvals[1,i] = stats.wilcoxon(X-h0,method='approx').zstatistic
+
+
+## plot
+axs[0].set(xlim=[-1.5,4],xlabel='Data value',ylabel='Count')
+axs[0].set_title(r'$\bf{A}$)  Distributions')
+
+axs[1].plot(sigmas,cents[0,:],'ks',markersize=8,markerfacecolor=(.3,.3,.3),label=r'$\Delta$ to mean')
+axs[1].plot(sigmas,cents[1,:],'ko',markersize=8,markerfacecolor=(.8,.8,.8),label=r'$\Delta$ to median')
+axs[1].legend(fontsize=12)
+axs[1].set(xlabel=r'$\sigma$ parameter for exp(X$\sigma$)',ylabel='Mean or median dist.')
+axs[1].set_title(r'$\bf{B}$)  Distance to H$_0$')
+
+axs[2].plot(sigmas,tvals[0,:],'ks',markersize=8,markerfacecolor=(.3,.3,.3),label='Parametric t')
+axs[2].plot(sigmas,tvals[1,:],'ko',markersize=8,markerfacecolor=(.8,.8,.8),label='Wilcoxon z')
+axs[2].legend(fontsize=12)
+axs[2].set(xlabel=r'$\sigma$ parameter for exp(X$\sigma$)',ylabel='z or t value')
+axs[2].set_title(r'$\bf{C}$)  Test stat. values')
+
+plt.tight_layout()
+plt.savefig('ttest_ex10a.png')
+plt.show()
+
+# plot showing relationship between central tendency distances and test statistic values
+
+_,axs = plt.subplots(1,2,figsize=(8,3.5))
+
+axs[0].plot(cents[0,:],tvals[0,:],'ko',markersize=12,markerfacecolor=(.6,.6,.6))
+axs[0].set(xlabel='Distance: mean to .5',ylabel='T-value',xlim=[-.6,-.4],
+           title=r'$\bf{A}$)  One-sample t-test')
+
+
+axs[1].plot(cents[1,:],tvals[1,:],'ko',markersize=12,markerfacecolor=(.6,.6,.6))
+axs[1].set(xlabel='Distance: median to .5',ylabel='Z-value',
+           title=r'$\bf{B}$)  Wilcoxon test')
+
+plt.tight_layout()
+plt.savefig('ttest_ex10b.png')
+plt.show()
+
+```
+
+## R version:
+
+```{r}
+#| label: "Exercise 10 (r-version)"
+#| fig-width: 11
+#| fig-height: 3
+# Exercise 10 ----
+
+# generate the data
+sigmas = seq(.1, 1.2, length=20)
+
+# null hypothesis value
+h0 = .5
+
+# initialize the results matrices
+tvals = matrix(0, nrow = 2, ncol = length(sigmas))
+cents = matrix(0, nrow=2, ncol = length(sigmas))
+
+pE10_A = ggplot()
+
+# compute and store all moments in a matrix
+for (i in seq_along(sigmas) ) {
+    # i = 1
+    s = sigmas[[i]]
+    # generate mean-centered data
+    X = exp(rnorm(100)*s)
+    X = X - mean(X)
+    
+    # compute and store the descriptives
+    cents[1, i] = mean(X) - h0
+    cents[2, i] = median(X) - h0
+    
+    # draw the histogram
+    if (i %% 3 == 0) {
+        mc = length(sigmas)+2
+        n_breaks_ = nclass.FD(X)
+        # pick a random color
+        color_ = rgb(i/mc, i/mc, i/mc)
+        X_hist = hist(X, breaks = n_breaks_, plot = F)
+        pE10_A = pE10_A +  
+            geom_line(
+                data = tibble(x = X_hist$mids,
+                              y = X_hist$counts),
+                aes(x = x, y = y),
+                linewidth=1,
+                color = color_
+            ) + 
+            geom_vline(
+                xintercept = median(X),
+                linetype="dashed",
+                linewidth=.8,
+                color = color_
+            )
+    }
+    # parametric t-test
+    tvals[1,i] = t.test(X,mu = h0)$statistic
+    # Wilcoxon test
+    tvals[2,i] = wilcox.test(
+        X - h0, 
+        exact = F, # no exact calculation for the p-value
+        correct = F, # not applying the continuity correction
+        alternative = "two.sided"
+        )$statistic
+}
+    
+pE10_A = pE10_A + 
+    xlim(c(-1.5, 4)) + 
+    myTheme + 
+    labs(x="Data value", y="Count",
+         title=bquote(bold("A)")~"Distributions"))
+
+# panel B:
+pE10_B = ggplot() + 
+    geom_point(
+        data = tibble(
+            x = sigmas,
+            y = cents[1,]
+        ),
+        aes(x = x, y = y, 
+            fill = "delta to mean",
+            shape = "delta to mean"),
+        size = 5
+    ) + 
+    geom_point(
+        data = tibble(
+            x = sigmas,
+            y = cents[2,]
+        ),
+        aes(x = x, y = y, 
+            fill = "delta to median",
+            shape = "delta to median"),
+        size=5
+    ) + 
+    scale_fill_manual(
+        labels = c(bquote(Delta~"to mean"),
+                   bquote(Delta~"to median")),
+        values = c("delta to mean" = rgb(.3, .3, .3),
+                   "delta to median" = rgb(.8, .8, .8))
+    ) + 
+    scale_shape_manual(
+        labels = c(bquote(Delta~"to mean"),
+                   bquote(Delta~"to median")),
+        values = c("delta to mean" = 22,
+                   "delta to median" = 21)
+    ) + 
+    myTheme + 
+    theme(legend.position = c(.3, .5)) + 
+    labs(x = bquote(sigma~"parameter for"~exp(X~sigma)),
+         y = "Mean of median dist.",
+         title = bquote(bold("B)")~"Distance to"~H[0]),
+         fill = "",
+         shape = "")
+
+# panel C:
+pE10_C = ggplot() + 
+    geom_point(
+        data = tibble(
+            x = sigmas,
+            y = tvals[1,]
+        ),
+        aes(x = x, y = y, 
+            fill = "Parametric t",
+            shape = "Parametric t"),
+        size = 5
+    ) + 
+    geom_point(
+        data = tibble(
+            x = sigmas,
+            y = tvals[2,]
+        ),
+        aes(x = x, y = y, 
+            fill = "Wilcoxon z",
+            shape = "Wilcoxon z"),
+        size=5
+    ) + 
+    scale_fill_manual(
+        values = c("Parametric t" = rgb(.3, .3, .3),
+                   "Wilcoxon z" = rgb(.8, .8, .8))
+    ) + 
+    scale_shape_manual(
+        values = c("Parametric t" = 22,
+                   "Wilcoxon z" = 21)
+    ) + 
+    myTheme + 
+    theme(legend.position = c(.3, .5)) + 
+    labs(x = bquote(sigma~"parameter for"~exp(X~sigma)),
+         y = "statistic",
+         title = bquote(bold("C)")~"Test stat. values"),
+         fill = "",
+         shape = "")
+
+## final plot
+pE10 = pE10_A + pE10_B + pE10_C
+pE10
+
+# saving:
+ggsave('ttest_ex10a.png', pE10, width=12, height=5)
+```
+
+
+```{r}
+#| label: "Exercise 10.2 (r-version)"
+#| fig-width: 8
+#| fig-height: 3.5
+# plot showing relationship between central tendency distances and test statistic values
+pE102_A = ggplot() + 
+    geom_point(
+        data = tibble(
+            x = cents[1,],
+            y = tvals[1,]
+        ),
+        aes(x = x, y = y),
+        fill = rgb(.6, .6, .6),
+        size=5
+    ) + 
+    xlim(c(-.6, -.4)) + 
+    myTheme + 
+    labs(x = "Disance: mean to .5",
+         y = "T-value",
+         title = bquote(bold("A)")~"One-sample t-test"))
+
+pE102_B = ggplot() + 
+    geom_point(
+        data = tibble(
+            x = cents[2,],
+            y = tvals[2,]
+        ),
+        aes(x = x, y = y),
+        fill = rgb(.6, .6, .6),
+        size=5
+    ) + 
+    myTheme + 
+    labs(x = "Disance: mean to .5",
+         y = "Stat-value",
+         title = bquote(bold("B)")~"Wilcoxon test"))
+
+# final plot
+pE102 = pE102_A + pE102_B
+pE102
+
+# saving
+ggsave('ttest_ex10b.png', pE102, width=8, height = 4)
+
+```
+
