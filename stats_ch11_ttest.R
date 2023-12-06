@@ -2108,3 +2108,80 @@ pE102
 
 # saving
 ggsave('ttest_ex10b.png', pE102, width=8, height = 4)
+
+# Exercise 11 ----
+
+# params
+meanoffsets = seq(0, 2, length = 71)
+samplesizes = seq(10, 811, by = 50)
+
+# initialize
+pvals = matrix(0, nrow = length(samplesizes), ncol=length(meanoffsets))
+cohend = matrix(0, nrow=length(samplesizes), ncol=length(meanoffsets))
+r2 = matrix(0, nrow=length(samplesizes), ncol=length(meanoffsets))
+
+# loop over sample sizes
+for (sidx in seq_along(samplesizes)) {
+    # sidx = 1
+    ssize = samplesizes[[sidx]]
+    
+    # loop over effect sizes
+    for (eidx in seq_along(meanoffsets)){
+        # eidx = 1
+        effect = meanoffsets[[eidx]]
+        
+        # generate the data
+        X = rnorm(mean = effect, sd = 1.5, n = ssize)
+        # run the t-test and store the results
+        ttest = t.test(X, mu = 0)
+        pvals[sidx, eidx] = ttest$p.value
+        
+        # Cohen's d
+        cohend[sidx, eidx] = abs( mean(X) / sd(X) )
+        
+        # R^2
+        r2[sidx, eidx] = ttest$statistic^2 / (ttest$statistic^2 + ttest$parameter)
+    
+    }
+}
+
+# plotting
+
+# panel A:
+pE11_A = 
+    ggplot(
+        data = tibble(data_index = log(as.vector(pvals) + 1e-16),
+                      data_value = as.vector(cohend)),
+        aes(x = data_index, y = data_value)
+    ) + 
+    geom_point(
+        size = 3,
+        fill = rgb(.8, .8, .8),
+        shape = 21
+    ) + 
+    myTheme + 
+    labs(title = bquote(bold("A)")~"Cohen'd by p-values"),
+         x = "log(p)", y = "Cohen's d")
+
+# panel V:
+pE11_B = 
+    ggplot(
+        data = tibble(data_index = as.vector(cohend),
+                      data_value = as.vector(r2)),
+        aes(x = data_index, y = data_value)
+    ) + 
+    geom_point(
+        size = 3,
+        fill = rgb(.8, .8, .8),
+        shape = 21
+    ) + 
+    myTheme + 
+    labs(title = bquote(bold("B)")~"Different effect size measures"),
+         x = "Cohen's d", y = bquote(R^2))
+
+# final plot
+pE11 = pE11_A + pE11_B
+pE11
+
+# saving
+ggsave("ttest_ex11.png", pE11, width=10, height=4)
