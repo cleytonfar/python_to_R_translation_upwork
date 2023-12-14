@@ -1,5 +1,7 @@
+# attaching packages:
 library(ggplot2)
 library(dplyr)
+library(tidyr)
 library(glue)
 library(stringr)
 library(purrr)
@@ -8,6 +10,7 @@ library(extraDistr)
 library(LaplacesDemon)
 set.seed(10)
 
+# Base ggplot theme used in the following plots
 myTheme = theme(
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
@@ -49,8 +52,6 @@ pA = ggplot(data=data, aes(x=data_index, y = data_value)) +
     ) + 
     labs(title = bquote(bold("A)")~"One sample"),
          x = "Data index", y = "Data value")
-pA 
-
 
 ## panel B: paired-samples t-test ----
 N = 20
@@ -93,8 +94,6 @@ pB = pB +
 labs(title = bquote(bold("B)")~"Paired samples"),
          x = "", y = "Data value")
 
-pB
-
 ## panel C: two-samples t-test ----
 pC = ggplot() + 
     theme(
@@ -133,22 +132,23 @@ for (i in seq(0, 1)) {
         )}
 
 pC = pC + 
-    scale_color_manual(values=c("Group 1" = rgb(0, 0, 0),
-                                "Group 2" = rgb(0.5, 0.5, 0.5)
-                                )) + 
-labs(title = bquote(bold("C)")~"Two ind. samples"),
+    scale_color_manual(
+        values=c("Group 1" = rgb(0, 0, 0),
+                 "Group 2" = rgb(0.5, 0.5, 0.5)
+                 )
+    ) + 
+    theme(legend.position = c(.8, .8)) + 
+    labs(title = bquote(bold("C)")~"Two ind. samples"),
          x = "Exam score", y = "Count")
-pC
-
 
 p11.1 = pA + pB + pC + plot_layout(ncol=3)
+p11.1
 
 # saving
 ggsave("ttest_ttestGoals.png", p11.1, width=18, height = 5)
 
 
 # Figure 11.2: A t-pdf ----
-
 t = seq(-4, 4, length=573)
 
 # a pdf with df=20
@@ -165,10 +165,12 @@ p_ttest_tpdf = ggplot(data=data, aes(x=data_index, y=data_value)) +
           axis.ticks.y = element_blank()) +
     labs(y="Probability", x = "T value")
 
+
+# plotting:
 p_ttest_tpdf
 
-ggsave(pt, "ttest_tpdf.png")
-
+# saving
+ggsave("ttest_tpdf.png", p_ttest_tpdf, width = 3, height = 4)
 
 # Computing p-values for one-tailed and two-tailed tests ----
 tval = 2.1
@@ -235,12 +237,12 @@ pB = ggplot(
     labs(y="t value", x = "cdf",
          title=bquote(bold("B)")~"T-values from CDF"))
 
-
+# plotting:
 p11.3 = pA + pB + plot_layout(ncol=2)
 p11.3            
 
+# saving:
 ggsave("ttest_tFromP.png", p11.3, width=10, height=4)
-
 
 # example usage to get the t-value associated with p=.05 and df=13
 pval = .05
@@ -276,10 +278,7 @@ data = tibble(
     data_value = tpdf
 )
 
-tidx = np.argmin(np.abs(t-(tval+t[-1])/2))
-tidx = which.min(abs(t - (tval + t[length(t)])/2))
-
-p = ggplot(data, aes(x=data_index, y=data_value)) + 
+p11.4 = ggplot(data, aes(x=data_index, y=data_value)) + 
     geom_line(
         linewidth=1
     ) +
@@ -338,9 +337,10 @@ p = ggplot(data, aes(x=data_index, y=data_value)) +
     labs(y = bquote(rho ~ "(t/" ~ H[0] ~ ")"), 
          x = "T value")
 
-p
+p11.4
 
-ggsave("ttest_tEmpWEq.png", p, width=7, height=5)
+# saving:
+ggsave("ttest_tEmpWEq.png", p11.4, width=7, height=5)
 
 
 # Figure 11.5: Completion of the previous figure to show both tails ----
@@ -480,8 +480,10 @@ p11.5 = p11.5 +
     labs(y = bquote(rho ~ "(t/" ~ H[0] ~ ")"), 
          x = "T value")
 
+# plotting:
 p11.5
 
+# saving:
 ggsave("ttest_tEmpWEq2.png", p11.5, width=8, height=6)
 
 
@@ -552,7 +554,7 @@ p11.6 = p11.6 +
 
 p11.6
 
-# saving;
+# saving:
 ggsave("ttest_normTests.png", p11.6, width=4, height=4)
 
 
@@ -725,7 +727,7 @@ data = tibble(data_index=1:sampsize,
               Xq = Xq,
               Delta = Delta)
 data = pivot_longer(data, cols = c("Xn", "Xq", "Delta"))
-data
+
 p11.8_A = ggplot(filter(data, name != "Delta"),
        aes(x = factor(name), y=value, group = data_index)) + 
     geom_line(
@@ -738,6 +740,7 @@ p11.8_A = ggplot(filter(data, name != "Delta"),
     ) + 
     ylim(c(0, 100)) + 
     myTheme + 
+    scale_x_discrete(labels = c(bquote(X[N]), bquote(X[Q]))) + 
     theme(
         axis.text = element_text(color="black"),
         axis.text.x = element_text(vjust=-2, hjust = .5),
@@ -763,6 +766,7 @@ p11.8_B = ggplot(data=filter(data, name == "Delta"),
          x = "",
          title=bquote(bold("B)")~"Differences"))
 
+# final plot
 p11.8 = p11.8_A + p11.8_B
 p11.8
 
@@ -829,7 +833,6 @@ p11.9_A = ggplot(data = data_A,
     labs(x="", y="",
          title=bquote(bold("A)")~"Data"))
 
-
 # panel B:
 nbreaks1_B = nclass.FD(x1)
 data1_B = hist(x1, breaks=nbreaks1_B, plot=F)
@@ -885,10 +888,11 @@ p11.9_B = ggplot(
     theme(legend.position = c(.8, .8)) + 
     labs(y = "Count", x = "Data value",
          title = bquote(bold("B)")~"Distributions"))
-
+# final plot
 p11.9 = p11.9_A + p11.9_B
 p11.9
 
+# saving:
 ggsave("ttest_indTtest.png", p11.9, width=10,  height = 3.5)
 
 # doubling rubric
@@ -1025,9 +1029,11 @@ p11.10_B = ggplot(
          y="Count", x="Data value", linetype="",
          title=bquote(bold("B)")~"Distribution"))
 
+# plot:
 p11.10 = p11.10_A + p11.10_B
 p11.10
 
+# saving
 ggsave("ttest_ranktest.png", p11.10, width=7, height=3.35)
 
 # the test!
@@ -1109,14 +1115,13 @@ p11.11_B = ggplot(
     labs(y="Data index", x = "Data values",
          title= glue("Wilcoxon z={zB}"))
 
-p11.11_B
-
-# 
+# final plot
 p11.11 = p11.11_A / p11.11_B
 p11.11
 
 # saving:
 ggsave("ttest_wilcoxonSign.png", p11.11, width=4, height=6)
+
 
 # Mann-Whitney U test ----
 
@@ -1228,6 +1233,8 @@ pE1_B = ggplot(
 # final plot
 pE1 = pE1_A + pE1_B
 pE1
+
+# saving:
 ggsave("ttest_ex1.png", pE1, width=15, height = 5)
 
 
@@ -1240,7 +1247,6 @@ t_den = sd(X) / sqrt(N)
 tval = t_num / t_den
 pval = pt(abs(tval), df=N-1, lower.tail = F)
 pval = 2*pval # double it for 2-tailed
-pval
 
 # using stats
 r = t.test(X, mu=h0)
@@ -1336,6 +1342,7 @@ pE2_B = ggplot() +
     labs(y="", x = "",
          title=bquote(bold("A)")~"Sample stds.")) 
 
+# final plot
 pE2 = pE2_A + pE2_B    
 pE2
 
@@ -1461,10 +1468,9 @@ ggsave("ttest_ex4.png", pE4, width=10, height = 3)
 # correlation coefficient (values close to 1 indicate a very strong 
 # relationship)
 r = cor.test(stds,s)
-r$estimate
 
 # plot
-p5 = ggplot(
+pE5 = ggplot(
     data = tibble(data_index = stds,
                   data_value = s),
     aes(x = data_index, y = data_value)
@@ -1481,10 +1487,10 @@ p5 = ggplot(
          title=sprintf("Correlation: r=%.3f", r$estimate))
 
 # final plot
-p5
+pE5
 
 # saving;
-ggsave("ttest_ex5.png", p5, width=10, height=3)
+ggsave("ttest_ex5.png", pE5, width=10, height=3)
 
 
 # Exercise 6 ----
@@ -1519,7 +1525,7 @@ for (i in seq_along(samplesizes)) {
     
 }
 
-propSig
+propSig[, 2]
 
 
 # Create a data frame with the values
@@ -1530,7 +1536,7 @@ data_ = pivot_longer(data_, -"SampleSizes", names_to = "MeanOffSets")
 data_
 
 # Create the ggalot
-pE6 = ggplot(data_, aes(x= MeanOffSets, y=SampleSizes, fill=value)) + 
+pE6_1 = ggplot(data_, aes(x= MeanOffSets, y=SampleSizes, fill=value)) + 
     #    geom_raster() + 
   geom_tile() +
   scale_fill_gradient(
@@ -1544,9 +1550,11 @@ pE6 = ggplot(data_, aes(x= MeanOffSets, y=SampleSizes, fill=value)) +
     ) + 
     labs(x = "Mean offset", y = "Sample size",
          fill = "Percent tests with p<.05")
+# plot
+pE6_1
 
 # save
-ggsave("ttest_ex6.png", pE6, width=8, height=4)
+ggsave("ttest_ex6.png", pE6_1, width=8, height=4)
 
 
 # Exercise 7 ----
@@ -1568,7 +1576,7 @@ Ypct = 100*(Xq-Xn) / Xn
 Ynrt = (Xq-Xn) / (Xq+Xn)
 
 # plots
-pE6_1 = ggplot(
+pE6_2_1 = ggplot(
     data = tibble(x = Ysub, y = Ysbz),
     aes(x = x, y = y)
     ) + 
@@ -1580,7 +1588,7 @@ pE6_1 = ggplot(
     myTheme + 
     labs(x="Subtraction", y="Z-scored")
 
-pE6_2 = ggplot(data = tibble(x = Ysub, y = Ypct),
+pE6_2_2 = ggplot(data = tibble(x = Ysub, y = Ypct),
                aes(x=x,y=y)) + 
     geom_point(
         size=5,
@@ -1591,7 +1599,7 @@ pE6_2 = ggplot(data = tibble(x = Ysub, y = Ypct),
     labs(x="Subtraction", y="Percent change")
 
 
-pE6_3 = ggplot(data = tibble(x = Ysub, y = Ynrt),
+pE6_2_3 = ggplot(data = tibble(x = Ysub, y = Ynrt),
                aes(x=x,y=y)) + 
     geom_point(
         size=5,
@@ -1601,7 +1609,7 @@ pE6_3 = ggplot(data = tibble(x = Ysub, y = Ynrt),
     myTheme + 
     labs(x="Subtraction", y="Norm. ration")
 
-pE6_4 = ggplot(data = tibble(x = Ysbz, y = Ypct),
+pE6_2_4 = ggplot(data = tibble(x = Ysbz, y = Ypct),
                aes(x=x,y=y)) + 
     geom_point(
         size=5,
@@ -1611,7 +1619,7 @@ pE6_4 = ggplot(data = tibble(x = Ysbz, y = Ypct),
     myTheme + 
     labs(x="Z-scored", y="Percent change")
 
-pE6_5 = ggplot(data = tibble(x = Ysbz, y = Ynrt),
+pE6_2_5 = ggplot(data = tibble(x = Ysbz, y = Ynrt),
                aes(x=x,y=y)) + 
     geom_point(
         size=5,
@@ -1621,7 +1629,7 @@ pE6_5 = ggplot(data = tibble(x = Ysbz, y = Ynrt),
     myTheme + 
     labs(x="Z-scored", y="Norm. ratio")
 
-pE6_6 = ggplot(data = tibble(x = Ypct, y = Ynrt),
+pE6_2_6 = ggplot(data = tibble(x = Ypct, y = Ynrt),
                aes(x=x,y=y)) + 
     geom_point(
         size=5
@@ -1633,11 +1641,11 @@ pE6_6 = ggplot(data = tibble(x = Ypct, y = Ynrt),
     labs(x="Percent change", y="Norm. ratio")
 
 # final plot:
-pE6 = pE6_1 + pE6_2 + pE6_3 + pE6_4 + pE6_5 + pE6_6 + plot_layout(ncol=3)
-pE6
+pE6_2 = pE6_2_1 + pE6_2_2 + pE6_2_3 + pE6_2_4 + pE6_2_5 + pE6_2_6 + plot_layout(ncol=3)
+pE6_2
 
 # saving:
-ggsave("ttest_ex7.png", pE6, width=10, height=6)
+ggsave("ttest_ex7.png", pE6_2, width=10, height=6)
 
 
 # Exercise 8 ----
@@ -1764,8 +1772,8 @@ ggplot(data = tibble(x = ns, y = tCrit),
 stdevs = seq(.01, 15, length=41)
 
 # initialize results matrix
-results = matrix(0, nrow = 3, ncol=length(stddevs))
-tCrit = rep(0, length(stddevs))
+results = matrix(0, nrow = 3, ncol=length(stdevs))
+tCrit = rep(0, length(stdevs))
 
 # start the experiment!
 for (i in seq_along(stdevs) ) {
@@ -1804,7 +1812,7 @@ for (i in seq_along(stdevs) ) {
 # plot
 
 # levene's test results
-pE9_A = ggplot(data = tibble(x = stddevs,
+pE9_A = ggplot(data = tibble(x = stdevs,
                      y = results[1,]),
        aes(x=x, y=y)) + 
     geom_point(
@@ -1981,7 +1989,7 @@ pE10_A = pE10_A +
     myTheme + 
     labs(x="Data value", y="Count",
          title=bquote(bold("A)")~"Distributions"))
-pE10_A
+
 
 # panel B:
 pE10_B = ggplot() + 
@@ -2109,6 +2117,7 @@ pE102
 # saving
 ggsave('ttest_ex10b.png', pE102, width=8, height = 4)
 
+
 # Exercise 11 ----
 
 # params
@@ -2185,3 +2194,177 @@ pE11
 
 # saving
 ggsave("ttest_ex11.png", pE11, width=10, height=4)
+
+
+# Exercise 12 ----
+
+# data reference
+
+# P. Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis.
+# Modeling wine preferences by data mining from physicochemical properties. In Decision Support Systems, Elsevier, 47(4):547-553, 2009.
+
+# https://archive.ics.uci.edu/ml/datasets/Wine+Quality
+url = "https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv"
+data = readr::read_delim(url, delim = ";")
+data
+
+# describe the data
+summary(data)
+
+# list number of unique values per column
+data %>% 
+    summarise_all(n_distinct) %>% 
+    tidyr::pivot_longer(everything())
+
+# plot some data
+pE12_1 = ggplot(stack(data), aes(x = ind, y = values, fill=ind)) +
+    geom_boxplot() + 
+    myTheme + 
+    theme(
+        legend.position = "none",
+        axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1)
+    ) + 
+    labs(x = "", y = "")
+
+# plot
+pE12_1
+
+### z-score all variables except for quality
+
+# find the columns we want to normalize (all except quality)
+cols2zscore = setdiff(names(data), "quality")
+
+# z-score (written out for clarity)
+dataz = data %>% 
+    mutate(across(all_of(cols2zscore), ~scale(.x)[, 1], .names = "{.col}"))
+
+# summary:
+summary(dataz)
+
+# check the plot again
+pE12_2 = ggplot(stack(dataz), aes(x = ind, y = values, fill=ind)) +
+    geom_boxplot() + 
+    myTheme + 
+    theme(
+        legend.position = "none",
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
+    ) + 
+    labs(x = "", y = "")
+pE12_2
+
+# test each variable for normality
+
+# loop through all variables
+for (col in cols2zscore) {
+    # compute and print the test
+    Stest = shapiro.test(dataz[[col]])
+    print(sprintf('%25s: p<%.4f', col, Stest$p.value))
+}
+
+# visualize the histograms
+# loop through columns and create histograms
+pE12_3 = vector("list", length(names(dataz)))
+for (i in seq_along(pE12_3)) {
+    col = names(dataz)[[i]]
+    pE12_3[[i]] = ggplot() + 
+        geom_histogram(
+                data = dataz,
+                aes(x = .data[[col]]),
+                color="black",
+                fill = rgb(.7, .7, .7)
+            ) + 
+            myTheme + 
+            theme(
+                axis.text=element_blank(), 
+                axis.ticks=element_blank()
+            ) + 
+            labs(x = col, y = "")
+}
+
+pE12_3 = reduce(pE12_3, `+`) + plot_layout(ncol = 4)
+pE12_3
+
+# saving:
+ggsave('ttest_ex12.png', pE12_3, width=10, height = 5)
+
+# binarize quality ratings into a new variable
+pE12_4 = ggplot(
+    data = dataz %>% count(quality) %>% mutate(quality = as.factor(quality)),
+    aes(x = quality, y = n)
+    ) + 
+    geom_col(
+        fill = rgb(.7, .7, .7),
+        color="black"
+    ) + 
+    myTheme + 
+    labs(x = "Quality rating", y = "Count")
+# plot
+pE12_4
+
+# create a new column for binarized (boolean) qualitya
+dataz = dataz %>% 
+    mutate(boolQuality = ifelse(quality > 5, T, F))
+
+# display data:
+dataz %>% 
+    select(quality, boolQuality)
+
+# Exercise 13 ----
+
+# run all t-tests and store the results
+
+# Note about this and the next code cell: You need to compute all p-values in order
+# to conduct the FDR correction. That's why I run the t-tests here and then report
+# the resutls in the following cell.
+
+# initialize results matrix as a dictionary
+results = vector("list", length(cols2zscore))
+    
+# loop over column
+for (i in seq_along(cols2zscore)){
+    col = cols2zscore[[i]]
+    # for convenience, extract the numerical variables
+    Xh = dataz %>% filter(boolQuality == T) %>% pull(col) # high rating
+    Xl = dataz %>% filter(boolQuality == F) %>% pull(col) # low rating
+    
+    # compute df
+    s1 = var(Xh)
+    s2 = var(Xl)
+    n1 = length(Xh)
+    n2 = length(Xl)
+    df_num = (s1/n1 + s2/n2)^2
+    df_den = s1^2/(n1^2*(n1-1)) + s2^2/(n2^2*(n2-1))
+    
+    # run the t-test and store the results in a dictionary
+    tres = t.test(Xh,Xl, var.equal = F)
+    #tres = stats.mannwhitneyu(Xh,Xl) # uncomment for Mann-Whitney U testd
+    
+    results[[i]] = list('t' = tres$statistic,
+                        'p' = tres$p.value,
+                        'df'= df_num/df_den )
+}
+names(results) = cols2zscore
+
+# need FDR correction function
+
+# bonferroni threshold
+bonP = .05/length(cols2zscore)
+
+# FDR correction (don't need p-values, only keep outcome)
+fdrH = p.adjust(map_dbl(results, "p"), method = "fdr")
+fdrH = fdrH < 0.05
+
+# loop through columns and report the results!
+for (i in seq_along(cols2zscore)){
+    col = cols2zscore[[i]]
+    # extract values
+    t  = results[[col]]$t
+    p  = results[[col]]$p
+    df = results[[col]]$df
+    
+    # determine if significant
+    issigB = ifelse(p < bonP, "*", " ")
+    issigF = ifelse(fdrH[[i]], "+", " ")
+    
+    print(sprintf('%20s: t(%.0f)=%6.2f, p=%.4f, %s%s', col, df, t, p, issigB, issigF))
+}

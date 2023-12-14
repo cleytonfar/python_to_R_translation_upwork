@@ -22,6 +22,7 @@ execute:
 
 ```{python}
 #| label: "python-setup"
+#| code-summary: "Python Setup"
 #| cache: false
 
 # import libraries and define global settings
@@ -42,7 +43,9 @@ np.random.seed(10)
 
 ```{r}
 #| label: r-setup
+#| code-summary: "R Setup"
 #| cache: false
+
 library(ggplot2)
 library(dplyr)
 library(tidyr)
@@ -52,7 +55,7 @@ library(purrr)
 library(patchwork)
 set.seed(10)
 
-# common theme for all plots:
+# base theme for all plots:
 myTheme = theme(
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
@@ -3473,7 +3476,6 @@ plt.show()
 #| fig-width: 10
 #| fig-height: 4
 
-
 # Exercise 11 ----
 
 # params
@@ -3550,7 +3552,384 @@ pE11
 
 # saving
 ggsave("ttest_ex11.png", pE11, width=10, height=4)
+```
 
 
+
+# Exercise 12 
+
+## Python version:
+
+```{python}
+#| cache: false
+#| eval: true
+# data reference
+
+# P. Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis.
+# Modeling wine preferences by data mining from physicochemical properties. In Decision Support Systems, Elsevier, 47(4):547-553, 2009.
+
+# https://archive.ics.uci.edu/ml/datasets/Wine+Quality
+
+url = "https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv"
+
+data = pd.read_csv(url,sep=';')
+data
+
+# describe the data
+data.describe()
+
+# list number of unique values per column
+for i in data.keys():
+  print(f'{i:>20} has {len(np.unique(data[i])):>3} unique values')
+  
+# plot some data
+fig,ax = plt.subplots(1,figsize=(17,4))
+ax = sns.boxplot(data=data)
+ax.set_xticklabels(ax.get_xticklabels(),rotation=45)
+
+plt.tight_layout()
+plt.show()
+
+# optionally remove outliers based on visual inspection (not used for the exercise)
+# data = data[data['total sulfur dioxide']<200]
+
+### z-score all variables except for quality
+
+# find the columns we want to normalize (all except quality)
+cols2zscore = data.keys()
+cols2zscore = cols2zscore.drop('quality')
+
+# make a copy of the dataframe to change
+dataz = data.copy()
+
+# z-score (written out for clarity)
+for col in cols2zscore:
+  meanval   = np.mean(data[col])
+  stdev     = np.std(data[col],ddof=1)
+  dataz[col] = (data[col]-meanval) / stdev
+
+# can also do more compactly
+#data[cols2zscore] = data[cols2zscore].apply(stats.zscore)
+
+dataz.describe()
+
+# check the plot again
+fig,ax = plt.subplots(1,figsize=(15,4))
+ax = sns.boxplot(data=dataz)
+ax.set_xticklabels(ax.get_xticklabels(),rotation=90)
+
+plt.tight_layout()
+plt.show()
+
+# test each variable for normality
+
+# loop through all variables
+for col in cols2zscore:
+
+  # compute and print the test
+  Stest = stats.shapiro(dataz[col])
+  print(f'{col:>25}: p<{Stest.pvalue:.4f}')
+
+# visualize the histograms
+_,axs = plt.subplots(3,4,figsize=(10,5))
+
+# loop through columns and create histograms
+for (idx,col),a in zip(enumerate(dataz.columns),axs.flatten()):
+  sns.histplot(data=dataz,x=col,ax=a,color=(.7,.7,.7))
+  a.set(xticks=[],yticks=[],ylabel='')
+
+
+plt.tight_layout()
+plt.savefig('ttest_ex12.png')
+plt.show()
+
+# binarize quality ratings into a new variable
+fig = plt.figure(figsize=(7,3))
+
+counts = dataz['quality'].value_counts()
+plt.bar(list(counts.keys()),counts,color=(.7,.7,.7),edgecolor='k')
+plt.xlabel('Quality rating')
+plt.ylabel('Count')
+plt.show()
+
+# create a new column for binarized (boolean) quality
+dataz['boolQuality'] = False
+dataz['boolQuality'][dataz['quality']>5] = True
+
+dataz[['quality','boolQuality']]
+```
+
+
+## R version
+
+```{r}
+#| label: "Exercise 12 (r-version)"
+#| 
+
+# data reference
+
+# P. Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis.
+# Modeling wine preferences by data mining from physicochemical properties. In Decision Support Systems, Elsevier, 47(4):547-553, 2009.
+
+# https://archive.ics.uci.edu/ml/datasets/Wine+Quality
+url = "https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv"
+data = readr::read_delim(url, delim = ";")
+data
+
+# describe the data
+summary(data)
+
+# list number of unique values per column
+data %>% 
+    summarise_all(n_distinct) %>% 
+    tidyr::pivot_longer(everything())
+```
+
+
+```{r}
+#| fig-width: 17
+#| fig-height: 4
+
+# plot some data
+pE12_1 = ggplot(stack(data), aes(x = ind, y = values, fill=ind)) +
+    geom_boxplot() + 
+    myTheme + 
+    theme(
+        legend.position = "none",
+        axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1)
+    ) + 
+    labs(x = "", y = "")
+pE12_1
+```
+
+
+```{r}
+#| fig-width: 15
+#| fig-height: 4
+### z-score all variables except for quality
+
+# find the columns we want to normalize (all except quality)
+cols2zscore = setdiff(names(data), "quality")
+
+# z-score (written out for clarity)
+dataz = data %>% 
+    mutate(across(cols2zscore, ~scale(.x)[, 1], .names = "{.col}"))
+
+# summary:
+summary(dataz)
+
+# check the plot again
+pE12_2 = ggplot(stack(dataz), aes(x = ind, y = values, fill=ind)) +
+    geom_boxplot() + 
+    myTheme + 
+    theme(
+        legend.position = "none",
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
+    ) + 
+    labs(x = "", y = "")
+pE12_2
+```
+
+
+```{r}
+#| results: hold
+
+# test each variable for normality
+
+# loop through all variables
+for (col in cols2zscore) {
+    # compute and print the test
+    Stest = shapiro.test(dataz[[col]])
+    print(sprintf('%25s: p<%.4f', col, Stest$p.value))
+}
+```
+
+
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+
+# visualize the histograms
+# loop through columns and create histograms
+pE12_3 = vector("list", length(names(dataz)))
+for (i in seq_along(pE12_3)) {
+    col = names(dataz)[[i]]
+    pE12_3[[i]] = ggplot() + 
+        geom_histogram(
+                data = dataz,
+                aes(x = .data[[col]]),
+                color="black",
+                fill = rgb(.7, .7, .7)
+            ) + 
+            myTheme + 
+            theme(
+                axis.text=element_blank(), 
+                axis.ticks=element_blank()
+            ) + 
+            labs(x = col, y = "")
+}
+
+pE12_3 = reduce(pE12_3, `+`) + plot_layout(ncol = 4)
+pE12_3
+
+# saving:
+ggsave('ttest_ex12.png', pE12_3, width=10, height = 5)
+```
+
+
+```{r}
+#| fig-width: 7
+#| fig-height: 3
+# binarize quality ratings into a new variable
+pE12_4 = ggplot(
+    data = dataz %>% count(quality) %>% mutate(quality = as.factor(quality)),
+    aes(x = quality, y = n)
+    ) + 
+    geom_col(
+        fill = rgb(.7, .7, .7),
+        color="black"
+    ) + 
+    myTheme + 
+    labs(x = "Quality rating", y = "Count")
+pE12_4
+
+# create a new column for binarized (boolean) qualitya
+dataz = dataz %>% 
+    mutate(boolQuality = ifelse(quality > 5, T, F))
+
+# display data:
+dataz %>% 
+    select(quality, boolQuality)
+```
+
+
+# Exercise 13
+
+## Python version
+
+```{python}
+#| label: "Exercise 13 (python-version)"
+# run all t-tests and store the results
+
+# Note about this and the next code cell: You need to compute all p-values in order
+# to conduct the FDR correction. That's why I run the t-tests here and then report
+# the resutls in the following cell.
+
+
+
+# initialize results matrix as a dictionary
+results = {}
+
+
+# loop over column
+for col in cols2zscore:
+
+  # for convenience, extract the numerical variables
+  Xh = dataz[col][dataz['boolQuality']==True].values  # high rating
+  Xl = dataz[col][dataz['boolQuality']==False].values # low rating
+
+  # compute df
+  s1,s2 = np.var(Xh,ddof=1),np.var(Xl,ddof=1)
+  n1,n2 = len(Xh),len(Xl)
+  df_num = (s1/n1 + s2/n2)**2
+  df_den = s1**2/(n1**2*(n1-1)) + s2**2/(n2**2*(n2-1))
+
+  # run the t-test and store the results in a dictionary
+  tres = stats.ttest_ind(Xh,Xl,equal_var=False)
+  #tres = stats.mannwhitneyu(Xh,Xl) # uncomment for Mann-Whitney U test
+
+  results[col] = { 't' : tres.statistic,
+                   'p' : tres.pvalue,
+                   'df': df_num/df_den }
+                   
+# need FDR correction function
+from statsmodels.stats.multitest import fdrcorrection
+
+# bonferroni threshold
+bonP = .05/len(cols2zscore)
+
+# FDR correction (don't need p-values, only keep outcome)
+fdrH = fdrcorrection([results[col]['p'] for col in cols2zscore],.05)[0]
+
+
+# loop through columns and report the results!
+for i,col in enumerate(cols2zscore):
+
+  # extract values
+  t  = results[col]['t']
+  p  = results[col]['p']
+  df = results[col]['df']
+
+  # determine if significant
+  issigB = [' ','*'][int(p<bonP)] # convert from bool to int to index
+  issigF = [' ','+'][int(fdrH[i])]
+
+  print(f'{col:>20}: t({df:.0f})={t:6.2f}, p={p:.4f}, {issigB}{issigF}')
+
+```
+
+## R version
+
+```{r}
+#| label: "Exercise 13 (r-version)"
+#| results: hold
+
+# run all t-tests and store the results
+
+# Note about this and the next code cell: You need to compute all p-values in order
+# to conduct the FDR correction. That's why I run the t-tests here and then report
+# the resutls in the following cell.
+
+# initialize results matrix as a dictionary
+results = vector("list", length(cols2zscore))
+    
+# loop over column
+for (i in seq_along(cols2zscore)){
+    col = cols2zscore[[i]]
+    # for convenience, extract the numerical variables
+    Xh = dataz %>% filter(boolQuality == T) %>% pull(col) # high rating
+    Xl = dataz %>% filter(boolQuality == F) %>% pull(col) # low rating
+    
+    # compute df
+    s1 = var(Xh)
+    s2 = var(Xl)
+    n1 = length(Xh)
+    n2 = length(Xl)
+    df_num = (s1/n1 + s2/n2)^2
+    df_den = s1^2/(n1^2*(n1-1)) + s2^2/(n2^2*(n2-1))
+    
+    # run the t-test and store the results in a dictionary
+    tres = t.test(Xh,Xl, var.equal = F)
+    #tres = stats.mannwhitneyu(Xh,Xl) # uncomment for Mann-Whitney U testd
+    
+    results[[i]] = list('t' = tres$statistic,
+                        'p' = tres$p.value,
+                        'df'= df_num/df_den )
+}
+names(results) = cols2zscore
+
+# need FDR correction function
+
+# bonferroni threshold
+bonP = .05/length(cols2zscore)
+
+# FDR correction (don't need p-values, only keep outcome)
+fdrH = p.adjust(map_dbl(results, "p"), method = "fdr")
+fdrH = fdrH < 0.05
+
+# loop through columns and report the results!
+for (i in seq_along(cols2zscore)){
+    col = cols2zscore[[i]]
+    # extract values
+    t  = results[[col]]$t
+    p  = results[[col]]$p
+    df = results[[col]]$df
+    
+    # determine if significant
+    issigB = ifelse(p < bonP, "*", " ")
+    issigF = ifelse(fdrH[[i]], "+", " ")
+    
+    print(sprintf('%20s: t(%.0f)=%6.2f, p=%.4f, %s%s', col, df, t, p, issigB, issigF))
+}
 ```
 

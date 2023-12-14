@@ -12,6 +12,7 @@ matplotlib = "*"
 syncrng = "*"
 jupyter = "*"
 jupyterlab = "*"
+statsmodels = "*"
 
 [dev-packages]
 
